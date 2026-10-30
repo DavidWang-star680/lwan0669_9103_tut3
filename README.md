@@ -41,6 +41,75 @@ Every technique below was taught in the course; the Canvas module is in brackets
 - **`sin()` / `cos()`** (Weeks 8, 11) turn the bend angle into the position of the blade tip and shape the hill. **`constrain()`** (Week 6) stops blades bending too far.
 - **`line()`, `ellipse()`, `stroke()`, `strokeWeight()`, `fill()`, `noStroke()`** (Weeks 6, 8) draw the blades and flowers. **`beginShape()`, `vertex()`, `endShape()`** (Week 10) draw the dark ground under the grass.
 - **`windowResized()` and `resizeCanvas()`** (Week 8) – positions are stored as fractions of the canvas, so the meadow rescales with the browser window.
+  
+-  Interaction(jiahui zou):
+//   1. Click on the umbrella  -> it opens. Click again -> it closes.
+//   2. Move the mouse left / right -> the umbrella gently tilts
+//      towards the mouse, as if it is being swayed by the user's hand.
+//
+// Both interactions are animated smoothly (easing with lerp), so the
+// umbrella never "jumps" from one state to another.
+// =====================================================================
+//
+// Everything used in this sketch was covered in the IDEA9103 course
+// material (the week where each item appears is shown in brackets):
+//
+//   setup()  draw()  createCanvas()  background()      (Week 6)
+//   fill()  stroke()  strokeWeight()  noStroke()       (Week 6)
+//   rect()  line()  triangle()                         (Week 6 Lecture)
+//   mouseX  mouseY  mousePressed()  constrain()        (Week 6)
+//   dist()                                             (Week 7 Tutorial)
+//   class / constructor / this / methods               (Weeks 7 / 8 / 11)
+//   Calling an object's methods: umbrella.move()       (Week 11 Tutorial: head.update(), head.display())
+//   Reading an object's properties from outside it     (Week 7 Tutorial: dist(segment.srcImgSegXPos, ...))
+//   Custom functions with parameters and return        (Weeks 3 / 4 Tutorials, Week 8 Tutorial drawValues())
+//   Objects written as { name: value }                 (Week 3 Lecture: let square = { size: 200, color: red })
+//   Returning an object { ... } from a function        (Week 4 Tutorial: return { firstName: firstName, ... })
+//   Arrays, array[0], array.push(), array.length       (Weeks 3 / 4 / 8)
+//   for loops, if statements, < > <= ===               (Week 4)
+//   % (remainder), ? : (ternary), ! (logical NOT)      (Weeks 5 / 7 / 8)
+//   sin()  cos()                                       (Week 8 / 11 Tutorials)
+//   push() / pop()  — the DRAWING versions             (Week 7 Lecture, Weeks 8 / 11)
+//       NOTE: these are not the same as array.push()!
+//   translate()  rotate()                              (Week 8 Tutorial, Week 11)
+//   lerp(a, b, t)  — easing / smooth transitions       (Week 11 Lecture / Tutorial)
+//   map(v, a1, b1, a2, b2)                             (Weeks 10 / 11)
+//   max()                                              (Week 11 Lecture)
+//   angleMode(DEGREES) — all angles in degrees         (Week 8 Tutorial, Week 11 Lecture / Tutorial)
+//   arc(x, y, w, h, start, stop) in degrees            (Week 11 Lecture: arc(0, 1, 20, 20, 10, 120))
+//   Transparency (the last argument of fill)           (Week 11 Tutorial: fill(20, 20))
+//   Colour arrays passed to fill() / stroke()          (Week 7 Tutorial: fill(this.srcImgSegColour))
+// =====================================================================
+ 
+ 
+// ---------------------------------------------------------------------
+// Global variables
+// ---------------------------------------------------------------------
+ 
+// This variable will hold our single Umbrella object (an instance of the
+// Umbrella class defined further down in this file).
+let umbrella;
+ 
+ 
+// ---------------------------------------------------------------------
+// setup() runs ONCE when the sketch starts.
+// ---------------------------------------------------------------------
+function setup() {
+  // Create an 800 x 600 pixel canvas to draw on.
+  createCanvas(800, 600);
+ 
+  // Measure every angle in degrees (0–360) instead of radians, the same
+  // as the Week 8 and Week 11 Tutorials. This affects rotate(), sin(),
+  // cos() and arc().
+  angleMode(DEGREES);
+ 
+  // Create the umbrella. The (x, y) we pass in is the bottom of the
+  // handle (where a hand would hold it). We place it in the horizontal
+  // centre of the canvas, 40 pixels above the bottom edge.
+  // This point is also the pivot that the umbrella rotates around.
+  umbrella = new Umbrella(width / 2, height - 40);
+}
+// draw() runs repeatedly, once per frame (about 60 times per second).
 
 ## Key decisions
 
