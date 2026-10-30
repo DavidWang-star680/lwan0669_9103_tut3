@@ -48,9 +48,9 @@ let unit = 1;                   // size of one "painting pixel" on this canvas (
 
 // Height of the top edge of the hill for a position nx (0 - 1 across the
 // canvas). The result is a fraction of the canvas height. The edge is a
-// gentle curve, highest in the middle. sin(): Week 8, 11
+// gentle curve (a parabola), highest in the middle: 0.35 in the middle, 0.42 at the sides.
 function ridgeY(nx) {
-  return 0.42 - sin(nx * PI) * 0.07;
+  return 0.35 + (nx - 0.5) * (nx - 0.5) * 0.28;
 }
 
 // Pick a colour for a blade, as [red, green, blue].
@@ -131,11 +131,12 @@ class GrassBlade {
     let angle = constrain(this.restLean + getBend(this.nx, this.ny, this.noiseLocation), -0.9, 0.9);
 
     // The blade is two short lines. The middle leans less than the tip,
-    // so the blade looks curved. sin() and cos(): Week 8, 11
-    let midX = x + sin(angle * 0.4) * h * 0.5;
-    let midY = y - cos(angle * 0.4) * h * 0.5;
-    let tipX = x + sin(angle) * h;
-    let tipY = y - cos(angle) * h;
+    // so the blade looks curved. We use JavaScript's Math.sin() and Math.cos() (Week 5)
+    // here, not p5's sin() and cos(), because the sketch uses angleMode(DEGREES).
+    let midX = x + Math.sin(angle * 0.4) * h * 0.5;
+    let midY = y - Math.cos(angle * 0.4) * h * 0.5;
+    let tipX = x + Math.sin(angle) * h;
+    let tipY = y - Math.cos(angle) * h;
 
     strokeWeight(this.weight * unit);                 // strokeWeight, stroke, line: Week 6
     stroke(this.baseColour[0], this.baseColour[1], this.baseColour[2]);
@@ -176,8 +177,8 @@ class Flower {
 
     // same wind as the grass
     let angle = getBend(this.nx, this.ny, this.noiseLocation);
-    let headX = x + sin(angle) * h;
-    let headY = y - cos(angle) * h;
+    let headX = x + Math.sin(angle) * h;
+    let headY = y - Math.cos(angle) * h;
 
     // thin green stem
     stroke(70, 100, 60);

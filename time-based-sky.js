@@ -1,17 +1,28 @@
+// time-based-sky.js
+// MECHANIC: Time-based - seasonal sky  (owner: Fei Jiang)
+//
+// Iteration 2 changes (made by Lizuo Wang with the help of Claude, Anthropic):
+//   - setup() and createCanvas() moved to sketch.js, so all mechanics share
+//     one canvas, and draw() was renamed drawSky(), called from sketch.js.
+//   - The clouds are now drawn by drawNoiseClouds() in perlin-clouds.js
+//     (random + Perlin noise, still changing with the season). The old
+//     drawSpringClouds / drawSummerClouds / drawAutumnClouds / drawWinterClouds
+//     functions below are no longer called and are kept only for reference.
+//   - drawGradientSky() sets strokeWeight(1), because the meadow changes it.
+// The cloud SHAPES (drawBigCloud1 ... drawSmallCloud) are still used.
+// Everything else (sky colours, sun, leaves, snow, season timing) is unchanged.
+
 let cloudMove = 0;
 
-function setup() {
-  createCanvas(600, 700);
-  angleMode(DEGREES);
-}
-
-function draw() {
+// Called every frame from sketch.js. Draws the sky, the sun, the clouds and
+// the falling leaves / snow for the current moment of the 1500-frame season cycle.
+function drawSky() {
   cloudMove = sin(frameCount * 0.4) * 20;
   let seasonFrame = frameCount % 1500;
 
   if (seasonFrame < 225) {
     drawSpringSky();
-    drawSpringClouds(255);
+    drawNoiseClouds(seasonFrame);
 
   } else if (seasonFrame < 375) {
     let amount = (seasonFrame - 225) / 150;
@@ -24,19 +35,15 @@ function draw() {
       amount
     );
 
-    let springAlpha = lerp(255, 0, amount);
-    drawSpringClouds(springAlpha);
-
     let sunAlpha = lerp(0, 255, amount);
     drawMovingSun(seasonFrame, sunAlpha);
 
-    let summerAlpha = lerp(0, 255, amount);
-    drawSummerClouds(summerAlpha);
+    drawNoiseClouds(seasonFrame);
 
   } else if (seasonFrame < 600) {
     drawSummerSky();
     drawMovingSun(seasonFrame, 255);
-    drawSummerClouds(255);
+    drawNoiseClouds(seasonFrame);
 
   } else if (seasonFrame < 750) {
     let amount = (seasonFrame - 600) / 150;
@@ -52,16 +59,14 @@ function draw() {
     let sunAlpha = lerp(255, 0, amount);
     drawMovingSun(seasonFrame, sunAlpha);
 
-    let summerAlpha = lerp(255, 0, amount);
-    drawSummerClouds(summerAlpha);
+    drawNoiseClouds(seasonFrame);
 
     let autumnAlpha = lerp(0, 255, amount);
-    drawAutumnClouds(autumnAlpha);
     drawAutumnLeaves(autumnAlpha);
 
   } else if (seasonFrame < 915) {
     drawAutumnSky();
-    drawAutumnClouds(255);
+    drawNoiseClouds(seasonFrame);
     drawAutumnLeaves(255);
 
   } else if (seasonFrame < 1125) {
@@ -76,17 +81,17 @@ function draw() {
       smoothAmount
     );
 
+    drawNoiseClouds(seasonFrame);
+
     let autumnAlpha = lerp(255, 0, smoothAmount);
-    drawAutumnClouds(autumnAlpha);
     drawAutumnLeaves(autumnAlpha);
 
     let winterAlpha = lerp(0, 255, smoothAmount);
-    drawWinterClouds(winterAlpha);
     drawSnow(winterAlpha);
 
   } else if (seasonFrame < 1290) {
     drawWinterSky();
-    drawWinterClouds(255);
+    drawNoiseClouds(seasonFrame);
     drawSnow(255);
 
   } else {
@@ -101,12 +106,10 @@ function draw() {
       smoothAmount
     );
 
-    let winterAlpha = lerp(255, 0, smoothAmount);
-    drawWinterClouds(winterAlpha);
-    drawSnow(winterAlpha);
+    drawNoiseClouds(seasonFrame);
 
-    let springAlpha = lerp(0, 255, smoothAmount);
-    drawSpringClouds(springAlpha);
+    let winterAlpha = lerp(255, 0, smoothAmount);
+    drawSnow(winterAlpha);
   }
 }
 
@@ -116,6 +119,8 @@ function draw() {
 // =====================================================
 
 function drawGradientSky(topColor, bottomColor) {
+  strokeWeight(1);
+
   for (let y = 0; y < height; y++) {
     let amount = map(y, 0, height, 0, 1);
     let skyColor = lerpColor(topColor, bottomColor, amount);
