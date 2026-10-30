@@ -20,7 +20,7 @@ Test keys (iteration 1 only):
 |---|---|---|
 | Lizuo Wang | Perlin noise and randomness – swaying meadow and scattered flowers | `perlin-grass.js` |
 | Jiahui Zou | User input – mouse-controlled skirt | _to be added_ |
-| Fei Jiang | Time-based – seasonal sky | _to be added_ |
+| Fei Jiang | Time-based – seasonal sky | _time-based-sky.js_ |
 
 `sketch.js` owns the canvas and calls each mechanic.
 
