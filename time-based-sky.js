@@ -1,19 +1,52 @@
+// =====================================================
+// TIME-BASED MECHANIC: FOUR-SEASON SKY
+// Developed by Fei Jiang
+// =====================================================
+
+// This mechanic creates a repeating four-season sky
+// using time-based animation in p5.js.
+
+// Group integration:
+// setup() and createCanvas() are handled in sketch.js,
+// allowing all mechanics to share one canvas.
+// drawSky() is called from the main sketch.js.
+
+// This sky mechanic draws its own seasonal clouds using
+// drawSpringClouds(), drawSummerClouds(), drawAutumnClouds(), and
+// drawWinterClouds(). It does not need another group's Perlin cloud file.
+
+// drawGradientSky() uses strokeWeight(1) to prevent
+// changes from other mechanics affecting the sky.
+
+// AI Acknowledgement (ChatGPT, OpenAI):
+// ChatGPT assisted with developing and refining
+// seasonal timing, colour transitions, fade effects,
+// and moving elements such as the sun, leaves and snow.
+// The code was adjusted through several iterations.
+// Key AI-assisted sections are explained below.
+
 let cloudMove = 0;
 
-function setup() {
-  createCanvas(600, 700);
-  angleMode(DEGREES);
-}
-
-function draw() {
+// Called every frame from sketch.js. Draws the sky, the sun, the clouds and
+// the falling leaves / snow for the current moment of the 1500-frame season cycle.
+// ChatGPT-assisted timing: frameCount tracks elapsed animation frames.
+// The remainder operator (%) restarts the 1500-frame cycle (about 25 seconds
+// at 60 frames per second); if/else checks select the current season.
+// cloudMove controls the horizontal movement of this mechanic's own clouds.
+function drawSky() {
   cloudMove = sin(frameCount * 0.4) * 20;
-  let seasonFrame = frameCount % 1500;
+ let seasonFrame = (millis() * 0.06) % 1500;
 
+  // Draw a seasonal sky first, then this mechanic's original clouds.
+  // Autumn leaves and winter snow are drawn only in their relevant seasons.
   if (seasonFrame < 225) {
     drawSpringSky();
-    drawSpringClouds(255);
+    drawMyClouds(seasonFrame);
 
   } else if (seasonFrame < 375) {
+    // ChatGPT-assisted transition: amount moves from 0 to 1 across 150 frames.
+    // lerp() increases the sun opacity as the spring sky changes to summer.
+    // The clouds crossfade between spring and summer.
     let amount = (seasonFrame - 225) / 150;
 
     drawSkyTransition(
@@ -24,21 +57,18 @@ function draw() {
       amount
     );
 
-    let springAlpha = lerp(255, 0, amount);
-    drawSpringClouds(springAlpha);
-
     let sunAlpha = lerp(0, 255, amount);
     drawMovingSun(seasonFrame, sunAlpha);
 
-    let summerAlpha = lerp(0, 255, amount);
-    drawSummerClouds(summerAlpha);
+    drawMyClouds(seasonFrame);
 
   } else if (seasonFrame < 600) {
     drawSummerSky();
     drawMovingSun(seasonFrame, 255);
-    drawSummerClouds(255);
+    drawMyClouds(seasonFrame);
 
   } else if (seasonFrame < 750) {
+    // Reverse the sun fade and bring in autumn leaves while the sky warms.
     let amount = (seasonFrame - 600) / 150;
 
     drawSkyTransition(
@@ -52,19 +82,20 @@ function draw() {
     let sunAlpha = lerp(255, 0, amount);
     drawMovingSun(seasonFrame, sunAlpha);
 
-    let summerAlpha = lerp(255, 0, amount);
-    drawSummerClouds(summerAlpha);
+    drawMyClouds(seasonFrame);
 
     let autumnAlpha = lerp(0, 255, amount);
-    drawAutumnClouds(autumnAlpha);
     drawAutumnLeaves(autumnAlpha);
 
   } else if (seasonFrame < 915) {
     drawAutumnSky();
-    drawAutumnClouds(255);
+    drawMyClouds(seasonFrame);
     drawAutumnLeaves(255);
 
   } else if (seasonFrame < 1125) {
+    // ChatGPT-assisted smoothstep: easing slows down the start and end of
+    // the autumn-to-winter transition. The same value controls colour and
+    // the leaf/snow opacity fades, so they change together.
     let amount = (seasonFrame - 915) / 210;
     let smoothAmount = amount * amount * (3 - 2 * amount);
 
@@ -76,20 +107,22 @@ function draw() {
       smoothAmount
     );
 
+    drawMyClouds(seasonFrame);
+
     let autumnAlpha = lerp(255, 0, smoothAmount);
-    drawAutumnClouds(autumnAlpha);
     drawAutumnLeaves(autumnAlpha);
 
     let winterAlpha = lerp(0, 255, smoothAmount);
-    drawWinterClouds(winterAlpha);
     drawSnow(winterAlpha);
 
   } else if (seasonFrame < 1290) {
     drawWinterSky();
-    drawWinterClouds(255);
+    drawMyClouds(seasonFrame);
     drawSnow(255);
 
   } else {
+    // Winter gradually returns to spring using the same smoothstep easing.
+    // Snow fades away while the sky colour changes back to spring blue.
     let amount = (seasonFrame - 1290) / 210;
     let smoothAmount = amount * amount * (3 - 2 * amount);
 
@@ -101,12 +134,10 @@ function draw() {
       smoothAmount
     );
 
-    let winterAlpha = lerp(255, 0, smoothAmount);
-    drawWinterClouds(winterAlpha);
-    drawSnow(winterAlpha);
+    drawMyClouds(seasonFrame);
 
-    let springAlpha = lerp(0, 255, smoothAmount);
-    drawSpringClouds(springAlpha);
+    let winterAlpha = lerp(255, 0, smoothAmount);
+    drawSnow(winterAlpha);
   }
 }
 
@@ -115,7 +146,13 @@ function draw() {
 // GRADIENT SKY
 // =====================================================
 
+// Draw a vertical gradient with a for loop: each horizontal line gets a
+// colour between topColor and bottomColor using p5.js lerpColor().
+// ChatGPT assisted with the gradient implementation. strokeWeight(1) also
+// resets the stroke after other group mechanics modify its thickness.
 function drawGradientSky(topColor, bottomColor) {
+  strokeWeight(1);
+
   for (let y = 0; y < height; y++) {
     let amount = map(y, 0, height, 0, 1);
     let skyColor = lerpColor(topColor, bottomColor, amount);
@@ -130,6 +167,9 @@ function drawGradientSky(topColor, bottomColor) {
 // SKY TRANSITION
 // =====================================================
 
+// ChatGPT-assisted colour interpolation: blend both the top and bottom
+// sky colours between seasons, then redraw the vertical gradient.
+// amount=0 shows the old palette; amount=1 shows the new palette.
 function drawSkyTransition(
   oldTop,
   oldBottom,
@@ -149,6 +189,8 @@ function drawSkyTransition(
 // Darker spring blue
 // =====================================================
 
+// Each season uses its own top/bottom RGB colours. The same gradient
+// function is reused so the sky stays consistent across the animation.
 function drawSpringSky() {
   let topColor = color(55, 125, 190);
   let bottomColor = color(145, 195, 225);
@@ -197,6 +239,11 @@ function drawWinterSky() {
 // MOVING SUN
 // =====================================================
 
+// ChatGPT-assisted sun animation: map() converts the season frame to a
+// 0-1 progress value; constrain() keeps it in that range. lerp() moves
+// the sun left to right, while sin() creates an arc across the sky.
+// Three translucent ellipses draw the soft glow and bright centre.
+// sin() here assumes the shared setup uses angleMode(DEGREES).
 function drawMovingSun(seasonFrame, sunAlpha) {
   let sunProgress = map(
     seasonFrame,
@@ -272,6 +319,8 @@ function drawMovingSun(seasonFrame, sunAlpha) {
 // SPRING CLOUDS
 // =====================================================
 
+// This mechanic's original p5.js cloud layouts are now used directly.
+// During seasonal transitions, old clouds fade out as new clouds fade in.
 function drawSpringClouds(alphaValue) {
   let bigCloudColor =
     color(250, 248, 240, alphaValue);
@@ -661,6 +710,9 @@ function drawAutumnClouds(alphaValue) {
 // AUTUMN LEAVES
 // =====================================================
 
+// ChatGPT-assisted leaf animation: frameCount controls falling speed,
+// % wraps each leaf back to the top, and sin() creates side-to-side sway.
+// Different offsets and multipliers give the leaves varied movement.
 function drawAutumnLeaves(alphaValue) {
   let y1 =
     (frameCount * 0.50) % 760 - 30;
@@ -782,6 +834,9 @@ function drawAutumnLeaves(alphaValue) {
 // ONE AUTUMN LEAF
 // =====================================================
 
+// Draw one leaf from an ellipse and triangle (basic p5.js shapes).
+// push()/pop() isolate translate() and rotate(), so the next leaf is not
+// affected by this leaf's position or rotation.
 function drawLeaf(
   x,
   y,
@@ -895,6 +950,9 @@ function drawWinterClouds(alphaValue) {
 // SNOW
 // =====================================================
 
+// ChatGPT-assisted snowfall: each snowflake has a different vertical
+// speed and starting offset. The % operator repeats its fall down the sky.
+// alphaValue controls the fade during seasonal transitions.
 function drawSnow(alphaValue) {
   noStroke();
 
@@ -1013,6 +1071,8 @@ function drawSnow(alphaValue) {
 // ONE SNOWFLAKE
 // =====================================================
 
+// Use sin() to add a small horizontal drift as each flake falls;
+// ellipse() draws an individual snowflake.
 function drawSnowflake(
   x,
   y,
@@ -1035,6 +1095,9 @@ function drawSnowflake(
 // REFERENCE CLOUD A
 // =====================================================
 
+// Reusable cloud-shape helpers: overlapping ellipses form a soft cloud,
+// and the second set of ellipses creates its lower shadow. The same shapes
+// can be reused at different coordinates, sizes and angles.
 function drawReferenceCloudA(
   x,
   y,
@@ -1344,6 +1407,8 @@ function drawBigCloud7(
 // MEDIUM CLOUD
 // =====================================================
 
+// Basic p5.js drawing techniques: translate(), rotate(), fill() and
+// ellipse() build reusable medium and small cloud shapes.
 function drawMediumCloud(
   x,
   y,
@@ -1392,4 +1457,42 @@ function drawSmallCloud(
   ellipse(0, 3 * s, 68 * s, 14 * s);
 
   pop();
+}
+
+// =====================================================
+// SEASONAL CLOUD LAYOUT CONTROL — FEI'S ORIGINAL CLOUDS
+// =====================================================
+
+// AI-assisted (ChatGPT): crossfade between the original seasonal clouds
+// during the same season transition intervals as the sky colour.
+// The four cloud layout functions below belong to this sky mechanic;
+// no Perlin cloud function from another file is required.
+function drawMyClouds(seasonFrame) {
+  if (seasonFrame < 225) {
+    drawSpringClouds(255);
+  } else if (seasonFrame < 375) {
+    let amount = (seasonFrame - 225) / 150;
+    drawSpringClouds(255 * (1 - amount));
+    drawSummerClouds(255 * amount);
+  } else if (seasonFrame < 600) {
+    drawSummerClouds(255);
+  } else if (seasonFrame < 750) {
+    let amount = (seasonFrame - 600) / 150;
+    drawSummerClouds(255 * (1 - amount));
+    drawAutumnClouds(255 * amount);
+  } else if (seasonFrame < 915) {
+    drawAutumnClouds(255);
+  } else if (seasonFrame < 1125) {
+    let amount = (seasonFrame - 915) / 210;
+    let smoothAmount = amount * amount * (3 - 2 * amount);
+    drawAutumnClouds(255 * (1 - smoothAmount));
+    drawWinterClouds(255 * smoothAmount);
+  } else if (seasonFrame < 1290) {
+    drawWinterClouds(255);
+  } else {
+    let amount = (seasonFrame - 1290) / 210;
+    let smoothAmount = amount * amount * (3 - 2 * amount);
+    drawWinterClouds(255 * (1 - smoothAmount));
+    drawSpringClouds(255 * smoothAmount);
+  }
 }

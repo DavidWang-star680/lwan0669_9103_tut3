@@ -1,31 +1,53 @@
-// sketch.js
-// Main file: owns the canvas and combines the mechanics.
-// Iteration 1: only the Perlin noise / randomness meadow (perlin-grass.js).
-// The skirt (user input) and the sky (time-based) will be added later.
+// sketch.js — SHARED GROUP MAIN FILE
+// Combines the three mechanics on one p5.js canvas:
+// 1) Fei Jiang: Time-based four-season sky (time-based-sky.js)
+// 2) Perlin Noise / Randomness meadow (perlin-grass.js)
+// 3) User Input umbrella (umbrella class and functions below)
 //
-// AI note: written with the help of Claude (Anthropic).
-// "(Week N)" = the Canvas module where the course teaches that technique.
+// Group integration acknowledgement: ChatGPT (OpenAI) assisted with merging
+// the previously separate setup() and draw() functions. The meadow and
+// umbrella mechanic implementations below remain the original group code.
+// The original group's Claude (Anthropic) acknowledgements are retained below.
+//
+// Before sketch.js, index.html must load p5.min.js, perlin-grass.js,
+// and time-based-sky.js, in that order.
+
+// The Perlin meadow's original prototype credited Claude (Anthropic).
+// It uses setupMeadow(), drawMeadow(), setWindLevel(), scatterFlowers().
+
+// =====================================================
+// SHARED SETUP / DRAW
+// =====================================================
+
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);        // createCanvas: Week 6, windowWidth: Week 8
-  setupMeadow();                                  // from perlin-grass.js
+  createCanvas(windowWidth, windowHeight);
+  angleMode(DEGREES);   // Required for the sky, falling leaves, and umbrella
+  frameRate(60); // Target 60 FPS
+  setupMeadow();        // Perlin meadow initialisation
+  umbrella = new Umbrella(width / 2, height - 40);
 }
 
 function draw() {
-  background(222, 232, 238);                      // pale sky colour. background: Week 6
-  drawMeadow();                                   // from perlin-grass.js
+  // Back-to-front drawing order: the sky should not cover the meadow
+  // or umbrella. drawSky() redraws the whole sky each frame.
+  drawSky();              // Fei Jiang: time-based four-season sky
+  drawMeadow();           // Perlin Noise / Randomness meadow
+  umbrella.move();        // User Input: update umbrella tilt / opening
+  umbrella.display();     // User Input: draw umbrella in the foreground
 }
 
-// When the browser window changes size (windowResized and resizeCanvas: Week 8).
-// The meadow keeps its positions as fractions of the canvas,
-// so nothing else needs to be done.
+// Keep the meadow's responsive canvas and reposition the umbrella too.
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
+  if (umbrella) {
+    umbrella.x = width / 2;
+    umbrella.y = height - 40;
+  }
 }
 
-// TEMPORARY TEST KEYS for iteration 1 (keyPressed and key: Week 6).
-// Remove or hand over to the user-input mechanic later.
-//   1 = calm wind, 2 = breeze, 3 = strong wind, R = scatter the flowers again
+// Original meadow keyboard controls: 1, 2, 3 change wind;
+// R scatters the flowers again.
 function keyPressed() {
   if (key === '1') setWindLevel(0);
   if (key === '2') setWindLevel(1);
@@ -33,7 +55,9 @@ function keyPressed() {
   if (key === 'r' || key === 'R') scatterFlowers();
 }
 
-
+// =====================================================
+// ORIGINAL USER INPUT UMBRELLA — preserved from group sketch.js
+// =====================================================
 
 // sketch.js -user input
 // Main file: owns the canvas and runs the user-input mechanic.
@@ -64,37 +88,8 @@ function keyPressed() {
 // Umbrella class defined further down in this file).
 let umbrella;
 
-// setup() runs ONCE when the sketch starts.
-function setup() {
-  // Create an 800 x 600 pixel canvas to draw on.
-  createCanvas(800, 600);
-
-  // Measure every angle in degrees (0–360) instead of radians, the same
-  // as the Week 8 and Week 11 Tutorials. This affects rotate(), sin(),
-  // cos() and arc().
-  angleMode(DEGREES);
-
-  // Create the umbrella. The (x, y) we pass in is the bottom of the
-  // handle (where a hand would hold it). We place it in the horizontal
-  // centre of the canvas, 40 pixels above the bottom edge.
-  // This point is also the pivot that the umbrella rotates around.
-  umbrella = new Umbrella(width / 2, height - 40);
-}
-
-// draw() runs repeatedly, once per frame (about 60 times per second).
-function draw() {
-  // Clear the canvas every frame with a sky-blue colour.
-  // Without this, every frame would be drawn on top of the last one
-  // and the moving umbrella would leave a trail.
-  background(110, 172, 232);
-
-  // Separate "updating" from "drawing" (the same pattern as
-  // head.update() and head.display() in the Week 11 Tutorial):
-  // 1) move() updates the umbrella's data (how open it is, its angle).
-  // 2) display() draws the umbrella using that updated data.
-  umbrella.move();
-  umbrella.display();
-}
+// The umbrella is initialised in the shared setup() above, and its
+// move() / display() methods are called by the shared draw() above.
 
 // mousePressed() is a built-in p5.js event function.
 // p5.js calls it automatically, once, every time the mouse is clicked.
