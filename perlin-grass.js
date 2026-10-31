@@ -16,7 +16,7 @@
 // HOW IT FITS WITH sketch.js
 //   sketch.js calls  setupMeadow()  once in setup()
 //                    drawMeadow()   every frame in draw()
-//   Other mechanics can change the wind with setWindLevel(0, 1 or 2).
+//   The wind is always a gentle breeze (windStrength = 0.25, the lowest level).
 //   All positions are stored as fractions (0 - 1) of the canvas, so the
 //   meadow rescales by itself when the browser window changes size.
 
@@ -24,13 +24,13 @@
 // 1. SETTINGS  (change these numbers to tune the look)
 // =====================================================================
 const bladeRows = 24;       // depth rows from back to front          (const: Week 2)
-const bladesPerRow = 90;    // grass blades in each row
+const bladesPerRow = 130;    // grass blades in each row
 const flowersPerRow = 18;   // flowers in each row (they only appear after the umbrella opens)
 
 const windScale = 3;        // size of the wind waves across the meadow (bigger = more, smaller waves)
 const windSpeed = 0.012;    // how fast the wind waves travel (bigger = faster)
 const maxBend = 0.8;        // how far blades can bend in radians (bigger = wilder)
-const umbrellaPushBend = 0.7;   // how far the moving umbrella pushes the grass, in radians
+const umbrellaPushBend = 0.45;  // how far the moving umbrella pushes the grass, in radians (small = a gentle breeze)
 const bloomSpeed = 0.004;       // how fast the flowers appear (per frame; 0.004 = about 4 seconds)
 
 // =====================================================================
@@ -40,8 +40,7 @@ let blades = [];                // all the GrassBlade objects (array: Week 3)
 let flowers = [];               // all the Flower objects
 
 let noiseTime = 0;              // our position in the noise; it grows, so the wind changes
-let windStrength = 0.7;         // current wind, 0 = calm ... 1 = strong
-let targetWindStrength = 0.7;   // the wind we are easing towards
+const windStrength = 0.25;      // the wind: a gentle breeze (0 = calm ... 1 = strong)
 let unit = 1;                   // size of one "painting pixel" on this canvas (set every frame)
 
 // Linked to the umbrella (user input, Jiahui Zou):
@@ -65,9 +64,9 @@ function ridgeY(nx) {
 // Far blades are dark blue-green, near blades are bright yellow-green,
 // like the meadow in Monet's painting. A few are olive or blue-green.
 function pickGrassColour(depth) {
-  let r = lerp(50, 125, depth);                   // lerp: Week 11
-  let g = lerp(90, 165, depth);
-  let b = lerp(70, 75, depth);
+  let r = lerp(72, 125, depth);                   // lerp: Week 11
+  let g = lerp(118, 165, depth);
+  let b = lerp(80, 75, depth);
 
   let pick = random(0, 1);
   if (pick < 0.15) {                              // if / else if: Week 4
@@ -140,8 +139,8 @@ class GrassBlade {
     this.ny = lerp(ridgeY(this.nx), 1.0, depth);      // below the hill edge
 
     // Close blades are taller and thicker. map(): Week 10, 11
-    this.h = map(depth, 0, 1, 0.015, 0.065) * random(0.7, 1.4);   // fraction of canvas height
-    this.weight = map(depth, 0, 1, 1.2, 3.5) * random(0.8, 1.2);
+    this.h = map(depth, 0, 1, 0.03, 0.07) * random(0.7, 1.4);   // fraction of canvas height
+    this.weight = map(depth, 0, 1, 1.7, 3.5) * random(0.8, 1.2);
 
     this.restLean = random(-0.25, 0.25);              // small lean when there is no wind
     this.noiseLocation = random(0, 10);               // own place in the noise
@@ -267,14 +266,6 @@ function scatterFlowers() {
   }
 }
 
-// Choose the wind: 0 = calm, 1 = breeze, 2 = strong.
-// The meadow eases into the new wind instead of jumping.
-function setWindLevel(level) {
-  if (level === 0) targetWindStrength = 0.25;
-  if (level === 1) targetWindStrength = 0.7;
-  if (level === 2) targetWindStrength = 1.0;
-}
-
 // Link the grass to the umbrella. sketch.js calls this every frame and passes
 // in the umbrella's tilt angle (in degrees). The grass is pushed by how fast
 // the umbrella MOVES, not by where it is: when the umbrella is still, the
@@ -283,9 +274,9 @@ function updateGrassFromUmbrella(umbrellaAngle) {
   let speed = umbrellaAngle - lastUmbrellaAngle;    // degrees moved since the last frame
   lastUmbrellaAngle = umbrellaAngle;
 
-  // A speed of 1 degree per frame counts as a full push (-1 or 1).
-  let target = constrain(speed / 1.0, -1, 1);
-  umbrellaPush = lerp(umbrellaPush, target, 0.15);  // ease, so the grass does not jerk (Week 11)
+  // A speed of 2 degrees per frame counts as a full push (-1 or 1).
+  let target = constrain(speed / 2, -1, 1);
+  umbrellaPush = lerp(umbrellaPush, target, 0.016); // a small number = the grass follows slowly, like a breeze (Week 11)
 }
 
 // Flowers appear while the umbrella is open and go away again when it is closed.
@@ -314,16 +305,58 @@ function drawGround() {
   endShape();
 }
 
+// Soft haze along the top edge of the hill, so the meadow melts into the sky
+// instead of ending in a hard line. It is made of many thin strips that follow
+// the edge; the strips get more transparent the further they are from it.
+// The colour is the sky colour at the horizon (getHazeColour() in perlin-clouds.js).
+// beginShape(), vertex(), endShape(): Week 10; for loops: Week 4
+function drawHorizonHaze() {
+  let c = getHazeColour(currentBlend);
+  let steps = 24;                                   // strips above the edge
+  let stripH = 3.5 * unit;                          // height of one strip
+  noStroke();
+
+  for (let j = 0; j < steps; j++) {
+    let fade = 1 - j / steps;                       // 1 at the edge ... 0 at the top
+    fill(c[0], c[1], c[2], 120 * fade * fade);
+    beginShape();
+    for (let i = 0; i <= 20; i++) {                 // along the edge, left to right
+      let nx = i / 20;
+      vertex(nx * width, ridgeY(nx) * height - j * stripH);
+    }
+    for (let i = 20; i >= 0; i--) {                 // and back, one strip higher
+      let nx = i / 20;
+      vertex(nx * width, ridgeY(nx) * height - (j + 1) * stripH);
+    }
+    endShape();
+  }
+
+  let below = 10;                                   // strips below the edge, over the dark ground
+  for (let j = 0; j < below; j++) {
+    let fade = 1 - j / below;
+    fill(c[0], c[1], c[2], 90 * fade * fade);
+    beginShape();
+    for (let i = 0; i <= 20; i++) {
+      let nx = i / 20;
+      vertex(nx * width, ridgeY(nx) * height + j * stripH);
+    }
+    for (let i = 20; i >= 0; i--) {
+      let nx = i / 20;
+      vertex(nx * width, ridgeY(nx) * height + (j + 1) * stripH);
+    }
+    endShape();
+  }
+}
+
 // Draw the meadow. Called every frame from draw().
 function drawMeadow() {
   unit = min(width, height) / 800;      // so lines and flowers scale with the window
 
-  // ease the wind towards its target with lerp() (Week 11)
-  windStrength = lerp(windStrength, targetWindStrength, 0.05);
-  // move through the noise; stronger wind moves faster
+  // move through the noise
   noiseTime += windSpeed * (0.6 + windStrength);
 
   drawGround();
+  drawHorizonHaze();                    // soft mist where the hill meets the sky
 
   // draw row by row: the blades of a row, then the flowers of that row
   for (let r = 0; r < bladeRows; r++) {
