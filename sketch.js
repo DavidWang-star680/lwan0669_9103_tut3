@@ -12,14 +12,14 @@
 // Drawing order (back to front): sky + clouds, woman, umbrella, her hand, meadow.
 // The meadow is last so the grass grows in front of her dress.
 //
-// There must be only ONE setup(), draw(), windowResized() and keyPressed() in the
+// There must be only ONE setup(), draw() and keyPressed() in the
 // whole project, and they live in this file.
 //
 // AI note: written with the help of Claude (Anthropic).
 // "(Week N)" = the Canvas module where the course teaches that technique.
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);        // createCanvas: Week 6, windowWidth: Week 8
+  createCanvas(600, 700);                         // the group's fixed canvas size: 600 x 700 pixels (createCanvas: Week 6)
   angleMode(DEGREES);                             // Fei's clouds and sun and Jiahui's umbrella measure angles in degrees (Week 8)
   setupClouds();                                  // perlin-clouds.js
   setupSnow();                                    // perlin-snow.js
@@ -37,12 +37,9 @@ function draw() {
   drawMeadow();                                   // perlin-grass.js, in front of everything
 }
 
-// When the browser window changes size (windowResized and resizeCanvas: Week 8).
-// The sky, the woman, the umbrella and the meadow all keep their positions as fractions of the canvas,
-// so nothing else needs to be done.
-function windowResized() {
-  resizeCanvas(windowWidth, windowHeight);
-}
+// The canvas is always 600 x 700. When the browser window is smaller, index.html
+// shrinks the picture to fit (CSS), so nothing needs to be done here, and p5.js
+// still gives mouseX and mouseY in canvas pixels.
 
 // TEMPORARY TEST KEYS (keyPressed and key: Week 6).
 // Remove or hand over to the user-input mechanic later.
