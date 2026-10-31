@@ -1,13 +1,21 @@
-// sketch.js -user input
-// Main file: owns the canvas and runs the user-input mechanic.
+// user input-umberalla.js
+// MECHANIC: User input  (owner: Jiahui Zou)
 // The umbrella opens / closes when clicked and sways towards the mouse.
 // Both changes are eased with lerp(), so nothing jumps between states.
 //
-// AI note: written with the help of Claude  （Anthropic).
+// JOINED TO THE MAIN SKETCH (iteration 3). Changes made for this:
+//   - setup() is now setupUmbrella() and draw() is now drawUmbrella();
+//     sketch.js calls them (there can be only one setup() and draw()).
+//   - createCanvas(), background() and angleMode() moved to sketch.js.
+//   - The umbrella is held by the woman: every frame it is moved to her hand
+//     (getWomanHand() in woman-figure.js) and scaled with umbrellaScale().
+//   - mousePressed() now takes that scale into account.
+//   - The sway is wider: -40 to +40 degrees instead of -8 to +8, and it follows the mouse faster (Lizuo, iteration 4).
+//
+// AI note: written with the help of Claude (Anthropic).
 // "(Week N)" = the Canvas module where the course teaches that technique.
 //
 // Techniques used:
-//   setup(), draw(), createCanvas(), background()            (Week 6)
 //   fill(), stroke(), strokeWeight(), noStroke()             (Week 6)
 //   rect(), line(), triangle()                               (Week 6)
 //   mouseX, mouseY, mousePressed(), constrain()              (Week 6)
@@ -19,7 +27,7 @@
 //   for loops, if statements, ===                            (Week 4)
 //   % remainder, array.push()                                (Week 8)
 //   push() / pop() for drawing (not array.push!)             (Week 8)
-//   translate(), rotate(), angleMode(DEGREES), sin(), cos()  (Week 8)
+//   translate(), rotate(), scale(), sin(), cos()             (Week 8)
 //   map()                                                    (Week 10)
 //   lerp() easing, arc(), max(), transparency                (Week 11)
 
@@ -27,29 +35,28 @@
 // Umbrella class defined further down in this file).
 let umbrella;
 
-// setup() runs ONCE when the sketch starts.
-function setup() {
-  // Create an 800 x 600 pixel canvas to draw on.
-  createCanvas(800, 600);
-
-  // Measure every angle in degrees (0–360) instead of radians, the same
-  // as the Week 8 and Week 11 Tutorials. This affects rotate(), sin(),
-  // cos() and arc().
-  angleMode(DEGREES);
-
-  // Create the umbrella. The (x, y) we pass in is the bottom of the
-  // handle (where a hand would hold it). We place it in the horizontal
-  // centre of the canvas, 40 pixels above the bottom edge.
-  // This point is also the pivot that the umbrella rotates around.
-  umbrella = new Umbrella(width / 2, height - 40);
+// The umbrella was drawn for a canvas of about 800 x 600 pixels. This gives
+// the size factor that fits it to the woman, who grows and shrinks with the
+// window (womanScale() is in woman-figure.js).
+function umbrellaScale() {
+  return womanScale() * 0.6;
 }
 
-// draw() runs repeatedly, once per frame (about 60 times per second).
-function draw() {
-  // Clear the canvas every frame with a sky-blue colour.
-  // Without this, every frame would be drawn on top of the last one
-  // and the moving umbrella would leave a trail.
-  background(110, 172, 232);
+// setupUmbrella() runs ONCE, called from setup() in sketch.js.
+function setupUmbrella() {
+  // Create the umbrella. The (x, y) we pass in is the bottom of the handle
+  // (where the hand holds it). It is also the pivot the umbrella rotates
+  // around. The real place is set every frame in drawUmbrella().
+  let hand = getWomanHand();
+  umbrella = new Umbrella(hand.x, hand.y);
+}
+
+// drawUmbrella() runs every frame, called from draw() in sketch.js.
+function drawUmbrella() {
+  // Follow the woman's hand (she may have moved because the window was resized).
+  let hand = getWomanHand();
+  umbrella.x = hand.x;
+  umbrella.y = hand.y;
 
   // Separate "updating" from "drawing" (the same pattern as
   // head.update() and head.display() in the Week 11 Tutorial):
@@ -71,15 +78,19 @@ function mousePressed() {
   // The middle of the canopy is straight above the handle, halfway
   // between the rim and the tip. rimY and tipY are measured from the
   // handle, so we add umbrella.y to turn them into canvas positions.
-  // (The umbrella only tilts by about 8 degrees, so we can ignore the
-  // tilt here — the click area below is large enough to cover it.)
-  let centreX = umbrella.x;
-  let centreY = umbrella.y + (s.rimY + umbrella.tipY) / 2;
+  // The umbrella is drawn scaled by umbrellaScale(), so the distances from the
+  // handle are multiplied by it.
+  let k = umbrellaScale();
+  // The umbrella can tilt a lot now, so the canopy middle is turned around the
+  // handle by the same angle (rotating a point with sin() and cos(), Week 8).
+  let c = (s.rimY + umbrella.tipY) / 2;             // distance above the handle (negative)
+  let centreX = umbrella.x - k * c * sin(umbrella.angle);
+  let centreY = umbrella.y + k * c * cos(umbrella.angle);
 
   // How close the click needs to be. Use the current canopy width,
   // but never less than 90 pixels, so the CLOSED umbrella (which is
   // very thin) is still easy to click.
-  let hitRadius = max(s.rimHalfWidth, 90);
+  let hitRadius = k * max(s.rimHalfWidth, 90);
 
   // dist() gives the distance between the mouse and the canopy middle.
   let d = dist(mouseX, mouseY, centreX, centreY);
@@ -162,14 +173,14 @@ class Umbrella {
     let mx = constrain(mouseX, 0, width);
 
     // Convert the mouse x range (0 to width) into an angle range
-    // (-8 to +8 degrees).
+    // (-40 to +40 degrees).
     // Mouse on the left  -> negative angle -> tilts left.
     // Mouse on the right -> positive angle -> tilts right.
-    let targetAngle = map(mx, 0, width, -8, 8);
+    let targetAngle = map(mx, 0, width, -40, 40);
 
-    // Ease the angle towards the target as well (6% per frame), so the
+    // Ease the angle towards the target as well (10% per frame), so the
     // umbrella follows the mouse softly instead of snapping to it.
-    this.angle = lerp(this.angle, targetAngle, 0.06);
+    this.angle = lerp(this.angle, targetAngle, 0.1);
   }
 
   // display() — draw the whole umbrella. Called once per frame.
@@ -184,6 +195,9 @@ class Umbrella {
     // Move the origin (0, 0) to the bottom of the handle.
     // From now on we can draw the umbrella around (0, 0).
     translate(this.x, this.y);
+
+    // Make the umbrella the right size for the woman (Week 11).
+    scale(umbrellaScale());
 
     // Rotate the whole coordinate system around that new origin.
     // Because the origin is the handle, the umbrella swings around the

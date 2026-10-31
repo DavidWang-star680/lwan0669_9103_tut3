@@ -3,26 +3,30 @@
 An interactive p5.js reinterpretation of Claude Monet's *Woman with a Parasol – Madame Monet and Her Son* (1875).
 Each team member owns one mechanic that changes one layer of the painting.
 
-> Status: **Iteration 1** – the Perlin noise / randomness meadow on its own.
-> The skirt (user input) and the sky (time-based) will be added by teammates.
+> Status: **Iteration 3** – the meadow (now only the bottom third of the canvas), the noise clouds, the seasonal sky, the woman and the umbrella all run together in one sketch.
+> Click the umbrella to open or close it (flowers bloom while it is open); move the mouse to tilt it (the grass leans the same way).
 
 ## How to run
 
 Open the folder in VS Code and use Live Server (*Go Live*), or open `index.html` in a browser.
 
-Test keys (iteration 1 only):
+Test keys (temporary):
 - `1` calm wind, `2` breeze, `3` strong wind
-- `R` scatter the flowers again
+- `R` scatter the flowers and the clouds again
+
+The seasons change by themselves: spring, summer, autumn, winter, then spring again (a 1500-frame cycle, about 25 seconds).
 
 ## Mechanic ownership
 
 | Member | Mechanic | File |
 |---|---|---|
-| Lizuo Wang | Perlin noise and randomness – swaying meadow and scattered flowers | `perlin-grass.js` |
-| Jiahui Zou | User input – mouse-controlled skirt | _to be added_ |
-| Fei Jiang | Time-based – seasonal sky | _time-based-sky.js_ |
+| Lizuo Wang | Perlin noise and randomness – swaying meadow, scattered flowers, and noise-driven clouds | `perlin-grass.js`, `perlin-clouds.js` |
+| Jiahui Zou | User input – umbrella that opens / closes on click and tilts with the mouse | `user input-umberalla.js` |
+| Fei Jiang | Time-based – seasonal sky, sun, leaves and snow, and the cloud shapes | `time-based-sky.js` |
 
-`sketch.js` owns the canvas and calls each mechanic.
+**Shared code (not one person's mechanic):** `sketch.js` owns the canvas and calls each mechanic; `woman-figure.js` draws the woman's body and tells the umbrella where her hand is; `index.html` loads the files.
+
+Drawing order, back to front: sky and clouds, woman, umbrella, her hand, meadow (so the grass grows in front of her dress).
 
 ## Inspiration
 
@@ -38,89 +42,42 @@ Every technique below was taught in the course; the Canvas module is in brackets
 - **`random()`** (Weeks 6 and 8) is used once, in the constructors, to choose each blade's and flower's position, height, thickness, colour and lean. These values are stored, so the layout does not flicker. `scatterFlowers()` creates a fresh random scatter.
 - **`class`, `constructor`, arrays, `push()`** (Weeks 3, 7, 8) – `GrassBlade` and `Flower` objects, stored in arrays and drawn back to front in `for` loops (Week 4).
 - **`map()`** (Weeks 10, 11) turns the noise value into a bend angle and makes close blades taller and thicker. **`lerp()`** (Week 11) blends colours from far to near and eases the wind strength between calm, breeze and strong.
-- **`sin()` / `cos()`** (Weeks 8, 11) turn the bend angle into the position of the blade tip and shape the hill. **`constrain()`** (Week 6) stops blades bending too far.
+- **`Math.sin()` / `Math.cos()`** (Week 5) turn the bend angle into the position of the blade tip. (JavaScript's `Math` versions are used, so they do not change when `angleMode(DEGREES)` is set for the clouds and the umbrella.) **`constrain()`** (Week 6) stops blades bending too far. The hill's top edge is a simple parabola.
+- **Clouds (iteration 2), in `perlin-clouds.js`** – one `NoiseCloud` object per cloud, drawn with Fei's cloud shapes. `random()` (Weeks 6 and 8) chooses once each cloud's size, shape, tilt, starting place and drift speed. `noise()` (Week 8) then moves it up and down and sideways, changes its size and tilts it a little, a bit like the grass, so no cloud repeats. The `%` remainder (Week 8) makes clouds drift to the right and re-enter on the left. `scale(1, thickness)` and `translate()` (Week 11) make clouds flatter or taller. `lerp()` (Week 11) slides the season values smoothly between two seasons.
+- **Clouds follow the season** (the season clock is Fei's `seasonFrame`): spring is the default; summer has more clouds and they are thicker; autumn has fewer, thinner clouds that float higher; winter has even fewer clouds than autumn, but they are thicker. Clouds fade in and out when the cloud cover passes their rank, and the biggest clouds are the last to disappear.
 - **`line()`, `ellipse()`, `stroke()`, `strokeWeight()`, `fill()`, `noStroke()`** (Weeks 6, 8) draw the blades and flowers. **`beginShape()`, `vertex()`, `endShape()`** (Week 10) draw the dark ground under the grass.
+- **Grass linked to the umbrella (iteration 4):** `updateGrassFromUmbrella()` measures how fast the umbrella's tilt angle changes each frame, eases it with `lerp()` (Week 11) and `constrain()` (Week 6) into a push between -1 and 1, and adds it to every blade's bend in `getBend()`. The grass leans the way the umbrella moves. When the umbrella stands still the push eases back to 0, so only the `noise()` wind is left.
+- **Flowers bloom when the umbrella opens (iteration 4):** every `Flower` gets a random `bloomAt` number with `random()`. While `umbrella.isOpen` is true, `flowerBloom` grows from 0 to 1 (and shrinks again when the umbrella is closed), so flowers appear one after another and their stems and petals grow with `constrain()`. There are eight random colours (chosen with an `if / else if` chain, Week 4), and each head is five petals placed in a circle with `Math.cos()` / `Math.sin()` (Week 5) and a `for` loop (Week 4).
+- **Slower clouds (iteration 4):** the noise step and the drift speed of the clouds were reduced, so they move about as calmly as the grass.
 - **`windowResized()` and `resizeCanvas()`** (Week 8) – positions are stored as fractions of the canvas, so the meadow rescales with the browser window.
-  
--  Interaction(jiahui zou):
-//   1. Click on the umbrella  -> it opens. Click again -> it closes.
-//   2. Move the mouse left / right -> the umbrella gently tilts
-//      towards the mouse, as if it is being swayed by the user's hand.
-//
-// Both interactions are animated smoothly (easing with lerp), so the
-// umbrella never "jumps" from one state to another.
-// =====================================================================
-//
-// Everything used in this sketch was covered in the IDEA9103 course
-// material (the week where each item appears is shown in brackets):
-//
-//   setup()  draw()  createCanvas()  background()      (Week 6)
-//   fill()  stroke()  strokeWeight()  noStroke()       (Week 6)
-//   rect()  line()  triangle()                         (Week 6 Lecture)
-//   mouseX  mouseY  mousePressed()  constrain()        (Week 6)
-//   dist()                                             (Week 7 Tutorial)
-//   class / constructor / this / methods               (Weeks 7 / 8 / 11)
-//   Calling an object's methods: umbrella.move()       (Week 11 Tutorial: head.update(), head.display())
-//   Reading an object's properties from outside it     (Week 7 Tutorial: dist(segment.srcImgSegXPos, ...))
-//   Custom functions with parameters and return        (Weeks 3 / 4 Tutorials, Week 8 Tutorial drawValues())
-//   Objects written as { name: value }                 (Week 3 Lecture: let square = { size: 200, color: red })
-//   Returning an object { ... } from a function        (Week 4 Tutorial: return { firstName: firstName, ... })
-//   Arrays, array[0], array.push(), array.length       (Weeks 3 / 4 / 8)
-//   for loops, if statements, < > <= ===               (Week 4)
-//   % (remainder), ? : (ternary), ! (logical NOT)      (Weeks 5 / 7 / 8)
-//   sin()  cos()                                       (Week 8 / 11 Tutorials)
-//   push() / pop()  — the DRAWING versions             (Week 7 Lecture, Weeks 8 / 11)
-//       NOTE: these are not the same as array.push()!
-//   translate()  rotate()                              (Week 8 Tutorial, Week 11)
-//   lerp(a, b, t)  — easing / smooth transitions       (Week 11 Lecture / Tutorial)
-//   map(v, a1, b1, a2, b2)                             (Weeks 10 / 11)
-//   max()                                              (Week 11 Lecture)
-//   angleMode(DEGREES) — all angles in degrees         (Week 8 Tutorial, Week 11 Lecture / Tutorial)
-//   arc(x, y, w, h, start, stop) in degrees            (Week 11 Lecture: arc(0, 1, 20, 20, 10, 120))
-//   Transparency (the last argument of fill)           (Week 11 Tutorial: fill(20, 20))
-//   Colour arrays passed to fill() / stroke()          (Week 7 Tutorial: fill(this.srcImgSegColour))
-// =====================================================================
- 
- 
-// ---------------------------------------------------------------------
-// Global variables
-// ---------------------------------------------------------------------
- 
-// This variable will hold our single Umbrella object (an instance of the
-// Umbrella class defined further down in this file).
-let umbrella;
- 
- 
-// ---------------------------------------------------------------------
-// setup() runs ONCE when the sketch starts.
-// ---------------------------------------------------------------------
-function setup() {
-  // Create an 800 x 600 pixel canvas to draw on.
-  createCanvas(800, 600);
- 
-  // Measure every angle in degrees (0–360) instead of radians, the same
-  // as the Week 8 and Week 11 Tutorials. This affects rotate(), sin(),
-  // cos() and arc().
-  angleMode(DEGREES);
- 
-  // Create the umbrella. The (x, y) we pass in is the bottom of the
-  // handle (where a hand would hold it). We place it in the horizontal
-  // centre of the canvas, 40 pixels above the bottom edge.
-  // This point is also the pivot that the umbrella rotates around.
-  umbrella = new Umbrella(width / 2, height - 40);
-}
-// draw() runs repeatedly, once per frame (about 60 times per second).
+
+## Techniques (Jiahui Zou - user input) and shared code
+
+- **User input (`user input-umberalla.js`, Jiahui Zou):** clicking the umbrella opens or closes it (`mousePressed()`, `dist()`), and moving the mouse left or right tilts it (`mouseX`, `map()`, `constrain()`). Both changes are eased with `lerp()` (Week 11), so nothing jumps. Jiahui should check and extend this section with his own wording.
+- **Woman's body (`woman-figure.js`, shared code):** drawn with simple shapes (`beginShape()`/`vertex()` Week 10, `ellipse()`, `rect()`, `line()`) inside `push()`/`translate()`/`scale()`/`pop()` (Weeks 8, 11), so she scales with the window. `getWomanHand()` returns an `{ x, y }` object (Week 4) that tells the umbrella where to be held.
 
 ## Key decisions
 
 - Grass blades are two short line segments (base and tip) instead of one straight line, so they bend a little.
 - The wind is not symmetric: it pushes mostly to the right, matching the blown scarf and skirt in the painting.
-- Only the meadow moves; in the final version the figures, parasol and sky stay still.
+- Only the meadow and the clouds use noise; the woman stays still and the umbrella only moves when the user clicks or moves the mouse.
+- Clouds and grass share one idea: `random()` decides what each object is like, `noise()` decides how it changes over time.
+- Winter clouds keep the same height as autumn clouds (the brief for the clouds only said "fewer and thicker").
 
 ## AI acknowledgement
 
 - **Lizuo Wang** used Claude (Anthropic) to help write `perlin-grass.js`, `sketch.js` and `index.html` for iteration 1: the structure of the `GrassBlade` and `Flower` classes, the wind calculation and the layout of the project. Claude also helped check that only techniques taught in the course were used. Lizuo reads, tests and adjusts the generated code. AI-assisted code is also marked in comments at the top of each file.
+- **Iteration 2:** Lizuo used Claude (Anthropic) to write `perlin-clouds.js` (the `NoiseCloud` class and the season blending), to join `time-based-sky.js` to the main sketch (its `setup()` and `draw()` were moved or renamed so there is only one of each in the project, and its fixed season cloud calls were replaced by `drawNoiseClouds()`), and to rewrite `sketch.js` and `index.html` so the sky, clouds and meadow run together. Fei's own code is unchanged apart from those edits, which are listed in the comment at the top of `time-based-sky.js`.
+- **Iteration 4:** Lizuo used Claude (Anthropic) to write the link between the umbrella and the meadow (`updateGrassFromUmbrella()`, `updateFlowers()`, the flower colours and petals) and to slow down the clouds.
+- **Iteration 3:** Lizuo used Claude (Anthropic) to write `woman-figure.js` (the shared woman's body), to join Jiahui's umbrella file to the main sketch (his `setup()` / `draw()` became `setupUmbrella()` / `drawUmbrella()`, the fixed canvas and background were removed, the umbrella now follows the woman's hand and is scaled, and `mousePressed()` takes the scale into account; listed in the comment at the top of his file), and to retune `perlin-grass.js` and `perlin-clouds.js` for the smaller meadow.
 - The team used ChatGPT to generate a concept image shown in the Week 9 presentation. It is not part of this project.
+
+## Iterations (Lizuo Wang)
+
+1. **Iteration 1** – swaying meadow: `noise()` wind waves, random blades and flowers.
+2. **Iteration 2** – clouds that move and change with `noise()` and `random()`, and follow the seasons of the time-based sky.
+3. **Iteration 3** – the meadow shrinks to the bottom third of the canvas (fewer rows, shorter blades; the cloud height bands were moved up to fit); the woman and Jiahui's umbrella are added to the main sketch.
+4. **Iteration 4** – the clouds move slower; the grass leans the way the umbrella moves (and keeps swaying with noise when it is still); no flowers at the start, they bloom in eight colours after the umbrella is opened.
 
 ## External references
 
