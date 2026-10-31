@@ -10,7 +10,7 @@
 //   - The umbrella is held by the woman: every frame it is moved to her hand
 //     (getWomanHand() in woman-figure.js) and scaled with umbrellaScale().
 //   - mousePressed() now takes that scale into account.
-//   - The sway is wider: -40 to +40 degrees instead of -8 to +8, and it follows the mouse faster (Lizuo, iteration 4).
+//   - The sway is wider: -60 to +60 degrees (120 degrees in all) instead of -8 to +8, and it follows the mouse faster (Lizuo, iteration 4).
 //
 // AI note: written with the help of Claude (Anthropic).
 // "(Week N)" = the Canvas module where the course teaches that technique.
@@ -39,7 +39,7 @@ let umbrella;
 // the size factor that fits it to the woman, who grows and shrinks with the
 // window (womanScale() is in woman-figure.js).
 function umbrellaScale() {
-  return womanScale() * 0.6;
+  return womanScale() * 0.55;
 }
 
 // setupUmbrella() runs ONCE, called from setup() in sketch.js.
@@ -88,9 +88,9 @@ function mousePressed() {
   let centreY = umbrella.y + k * c * cos(umbrella.angle);
 
   // How close the click needs to be. Use the current canopy width,
-  // but never less than 90 pixels, so the CLOSED umbrella (which is
+  // but never less than 150 units, so the CLOSED umbrella (which is
   // very thin) is still easy to click.
-  let hitRadius = k * max(s.rimHalfWidth, 90);
+  let hitRadius = k * max(s.rimHalfWidth, 150);
 
   // dist() gives the distance between the mouse and the canopy middle.
   let d = dist(mouseX, mouseY, centreX, centreY);
@@ -173,10 +173,10 @@ class Umbrella {
     let mx = constrain(mouseX, 0, width);
 
     // Convert the mouse x range (0 to width) into an angle range
-    // (-40 to +40 degrees).
+    // (-60 to +60 degrees).
     // Mouse on the left  -> negative angle -> tilts left.
     // Mouse on the right -> positive angle -> tilts right.
-    let targetAngle = map(mx, 0, width, -40, 40);
+    let targetAngle = map(mx, 0, width, -60, 60);
 
     // Ease the angle towards the target as well (10% per frame), so the
     // umbrella follows the mouse softly instead of snapping to it.

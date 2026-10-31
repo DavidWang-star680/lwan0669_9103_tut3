@@ -10,7 +10,16 @@
 //     functions below are no longer called and are kept only for reference.
 //   - drawGradientSky() sets strokeWeight(1), because the meadow changes it.
 // The cloud SHAPES (drawBigCloud1 ... drawSmallCloud) are still used.
-// Everything else (sky colours, sun, leaves, snow, season timing) is unchanged.
+// Iteration 4 changes:
+//   - seasonFrame = (frameCount * 0.375) % 1500, so the seasons run at 37.5% of the
+//     first speed (a full year now takes 4000 frames); the changes between seasons
+//     last just as much longer.
+//   - The snow is now drawNoiseSnow() in perlin-snow.js (bigger flakes, whole sky).
+//     The old drawSnow() is no longer called.
+//   - The sun is now drawCycleSun(): it crosses the sky from left to right over and
+//     over, in every season. The old drawMovingSun() is no longer called. Sun and
+//     clouds are drawn together by drawSunAndClouds() (perlin-clouds.js).
+// Everything else (sky colours, leaves, snow) is unchanged.
 
 let cloudMove = 0;
 
@@ -18,11 +27,11 @@ let cloudMove = 0;
 // the falling leaves / snow for the current moment of the 1500-frame season cycle.
 function drawSky() {
   cloudMove = sin(frameCount * 0.4) * 20;
-  let seasonFrame = frameCount % 1500;
+  let seasonFrame = (frameCount * 0.375) % 1500;  // x 0.375: every season and every change of season lasts 2.7 times longer than at first (Lizuo, iteration 4)
 
   if (seasonFrame < 225) {
     drawSpringSky();
-    drawNoiseClouds(seasonFrame);
+    drawSunAndClouds(seasonFrame);
 
   } else if (seasonFrame < 375) {
     let amount = (seasonFrame - 225) / 150;
@@ -35,15 +44,11 @@ function drawSky() {
       amount
     );
 
-    let sunAlpha = lerp(0, 255, amount);
-    drawMovingSun(seasonFrame, sunAlpha);
-
-    drawNoiseClouds(seasonFrame);
+    drawSunAndClouds(seasonFrame);
 
   } else if (seasonFrame < 600) {
     drawSummerSky();
-    drawMovingSun(seasonFrame, 255);
-    drawNoiseClouds(seasonFrame);
+    drawSunAndClouds(seasonFrame);
 
   } else if (seasonFrame < 750) {
     let amount = (seasonFrame - 600) / 150;
@@ -56,17 +61,14 @@ function drawSky() {
       amount
     );
 
-    let sunAlpha = lerp(255, 0, amount);
-    drawMovingSun(seasonFrame, sunAlpha);
-
-    drawNoiseClouds(seasonFrame);
+    drawSunAndClouds(seasonFrame);
 
     let autumnAlpha = lerp(0, 255, amount);
     drawAutumnLeaves(autumnAlpha);
 
   } else if (seasonFrame < 915) {
     drawAutumnSky();
-    drawNoiseClouds(seasonFrame);
+    drawSunAndClouds(seasonFrame);
     drawAutumnLeaves(255);
 
   } else if (seasonFrame < 1125) {
@@ -81,18 +83,18 @@ function drawSky() {
       smoothAmount
     );
 
-    drawNoiseClouds(seasonFrame);
+    drawSunAndClouds(seasonFrame);
 
     let autumnAlpha = lerp(255, 0, smoothAmount);
     drawAutumnLeaves(autumnAlpha);
 
     let winterAlpha = lerp(0, 255, smoothAmount);
-    drawSnow(winterAlpha);
+    drawNoiseSnow(winterAlpha);
 
   } else if (seasonFrame < 1290) {
     drawWinterSky();
-    drawNoiseClouds(seasonFrame);
-    drawSnow(255);
+    drawSunAndClouds(seasonFrame);
+    drawNoiseSnow(255);
 
   } else {
     let amount = (seasonFrame - 1290) / 210;
@@ -106,10 +108,10 @@ function drawSky() {
       smoothAmount
     );
 
-    drawNoiseClouds(seasonFrame);
+    drawSunAndClouds(seasonFrame);
 
     let winterAlpha = lerp(255, 0, smoothAmount);
-    drawSnow(winterAlpha);
+    drawNoiseSnow(winterAlpha);
   }
 }
 
@@ -199,7 +201,37 @@ function drawWinterSky() {
 
 
 // =====================================================
-// MOVING SUN
+// SUN THAT CROSSES THE SKY (iteration 4, Lizuo Wang with Claude)
+// The sun moves slowly from the far left to the far right and then starts
+// again. It does not depend on the season, and it is drawn before the clouds,
+// so the clouds are always in front of it.
+// =====================================================
+
+const sunPeriod = 2400;     // frames for one crossing of the sky
+
+function drawCycleSun() {
+  let progress = (frameCount % sunPeriod) / sunPeriod;   // 0 = far left ... 1 = far right
+  let unit = min(width, height) / 700;
+
+  let sunX = lerp(0.04, 0.96, progress) * width;
+  // an arc: low at the two ends, high in the middle. Math.sin(): Week 5
+  let sunY = lerp(0.40, 0.14, Math.sin(progress * Math.PI)) * height;
+
+  // fade in at the start and fade out at the end, so the sun does not jump back
+  let sunAlpha = 255 * constrain(min(progress, 1 - progress) * 14, 0, 1);
+
+  noStroke();
+  fill(255, 220, 90, sunAlpha * 0.15);
+  ellipse(sunX, sunY, 150 * unit, 150 * unit);
+  fill(255, 220, 80, sunAlpha * 0.30);
+  ellipse(sunX, sunY, 110 * unit, 110 * unit);
+  fill(255, 225, 90, sunAlpha);
+  ellipse(sunX, sunY, 68 * unit, 68 * unit);
+}
+
+
+// =====================================================
+// OLD MOVING SUN (no longer used)
 // =====================================================
 
 function drawMovingSun(seasonFrame, sunAlpha) {

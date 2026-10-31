@@ -2,6 +2,7 @@
 // MAIN FILE, shared by the whole group: owns the canvas and calls each mechanic.
 //   time-based-sky.js  (Fei Jiang)    sky, sun, leaves, snow  -> drawSky()
 //   perlin-clouds.js   (Lizuo Wang)   noise clouds            -> called from drawSky()
+//   perlin-snow.js     (Lizuo Wang)   noise snow              -> called from drawSky() in winter
 //   perlin-grass.js    (Lizuo Wang)   meadow and flowers      -> setupMeadow(), drawMeadow()
 //   user input-umberalla.js (Jiahui Zou) umbrella (click, mouse) -> setupUmbrella(), drawUmbrella()
 //   woman-figure.js    (SHARED code)  the woman's body        -> drawWoman(), drawWomanHand()
@@ -21,6 +22,7 @@ function setup() {
   createCanvas(windowWidth, windowHeight);        // createCanvas: Week 6, windowWidth: Week 8
   angleMode(DEGREES);                             // Fei's clouds and sun and Jiahui's umbrella measure angles in degrees (Week 8)
   setupClouds();                                  // perlin-clouds.js
+  setupSnow();                                    // perlin-snow.js
   setupMeadow();                                  // perlin-grass.js
   setupUmbrella();                                // user input-umberalla.js
 }
@@ -44,14 +46,11 @@ function windowResized() {
 
 // TEMPORARY TEST KEYS (keyPressed and key: Week 6).
 // Remove or hand over to the user-input mechanic later.
-//   1 = calm wind, 2 = breeze, 3 = strong wind
-//   R = scatter the flowers and the clouds again
+//   R = scatter the flowers, the clouds and the snow again
 function keyPressed() {
-  if (key === '1') setWindLevel(0);
-  if (key === '2') setWindLevel(1);
-  if (key === '3') setWindLevel(2);
   if (key === 'r' || key === 'R') {
     scatterFlowers();
     scatterClouds();
+    scatterSnow();
   }
 }
