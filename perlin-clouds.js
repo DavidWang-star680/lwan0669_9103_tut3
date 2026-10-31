@@ -31,7 +31,7 @@ const cloudTop = 0.05;      // highest a cloud can float (fraction of canvas hei
 //                        spring  summer  autumn  winter
 const seasonCover     = [  0.50,   0.90,   0.28,   0.16 ];  // share of clouds that are visible
 const seasonThickness = [  1.00,   1.40,   0.55,   1.50 ];  // 1 = normal, bigger = thicker (taller) clouds
-const seasonLowest    = [  0.36,   0.38,   0.18,   0.18 ];  // lowest a cloud may float (fraction of canvas height)
+const seasonLowest    = [  0.50,   0.54,   0.30,   0.30 ];  // lowest a cloud may float (fraction of canvas height)
 
 // Cloud and shadow colours: these are Fei's season colours, as [red, green, blue].
 const seasonCloudColour  = [[250, 248, 240], [255, 253, 245], [225, 190, 160], [195, 205, 215]];

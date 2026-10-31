@@ -3,9 +3,11 @@
 //   time-based-sky.js  (Fei Jiang)    sky, sun, leaves, snow  -> drawSky()
 //   perlin-clouds.js   (Lizuo Wang)   noise clouds            -> called from drawSky()
 //   perlin-grass.js    (Lizuo Wang)   meadow and flowers      -> setupMeadow(), drawMeadow()
-// The user-input umbrella (user input-umberalla.js) is not joined yet: it still has
-// its own setup() and draw(), which must be renamed (e.g. setupUmbrella / drawUmbrella)
-// before it can be added here.
+//   user input-umberalla.js (Jiahui Zou) umbrella (click, mouse) -> setupUmbrella(), drawUmbrella()
+//   woman-figure.js    (SHARED code)  the woman's body        -> drawWoman(), drawWomanHand()
+//
+// Drawing order (back to front): sky + clouds, woman, umbrella, her hand, meadow.
+// The meadow is last so the grass grows in front of her dress.
 //
 // There must be only ONE setup(), draw(), windowResized() and keyPressed() in the
 // whole project, and they live in this file.
@@ -15,18 +17,22 @@
 
 function setup() {
   createCanvas(windowWidth, windowHeight);        // createCanvas: Week 6, windowWidth: Week 8
-  angleMode(DEGREES);                             // Fei's clouds, sun and the umbrella measure angles in degrees (Week 8)
+  angleMode(DEGREES);                             // Fei's clouds and sun and Jiahui's umbrella measure angles in degrees (Week 8)
   setupClouds();                                  // perlin-clouds.js
   setupMeadow();                                  // perlin-grass.js
+  setupUmbrella();                                // user input-umberalla.js
 }
 
 function draw() {
   drawSky();                                      // time-based-sky.js (it also draws the noise clouds)
-  drawMeadow();                                   // perlin-grass.js, in front of the sky
+  drawWoman();                                    // woman-figure.js (shared)
+  drawUmbrella();                                 // user input-umberalla.js, held by the woman
+  drawWomanHand();                                // woman-figure.js, her hand in front of the handle
+  drawMeadow();                                   // perlin-grass.js, in front of everything
 }
 
 // When the browser window changes size (windowResized and resizeCanvas: Week 8).
-// The clouds and the meadow keep their positions as fractions of the canvas,
+// The sky, the woman, the umbrella and the meadow all keep their positions as fractions of the canvas,
 // so nothing else needs to be done.
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);

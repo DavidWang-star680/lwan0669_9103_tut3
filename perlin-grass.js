@@ -23,7 +23,7 @@
 // =====================================================================
 // 1. SETTINGS  (change these numbers to tune the look)
 // =====================================================================
-const bladeRows = 36;       // depth rows from back to front          (const: Week 2)
+const bladeRows = 24;       // depth rows from back to front          (const: Week 2)
 const bladesPerRow = 90;    // grass blades in each row
 const flowersPerRow = 14;   // flowers in each row
 
@@ -48,9 +48,10 @@ let unit = 1;                   // size of one "painting pixel" on this canvas (
 
 // Height of the top edge of the hill for a position nx (0 - 1 across the
 // canvas). The result is a fraction of the canvas height. The edge is a
-// gentle curve (a parabola), highest in the middle: 0.35 in the middle, 0.42 at the sides.
+// gentle curve (a parabola), highest in the middle: 0.64 in the middle, 0.67 at the sides.
+// So the meadow fills only the bottom third of the canvas (iteration 3).
 function ridgeY(nx) {
-  return 0.35 + (nx - 0.5) * (nx - 0.5) * 0.28;
+  return 0.64 + (nx - 0.5) * (nx - 0.5) * 0.12;
 }
 
 // Pick a colour for a blade, as [red, green, blue].
@@ -107,7 +108,7 @@ class GrassBlade {
     this.ny = lerp(ridgeY(this.nx), 1.0, depth);      // below the hill edge
 
     // Close blades are taller and thicker. map(): Week 10, 11
-    this.h = map(depth, 0, 1, 0.02, 0.09) * random(0.7, 1.4);   // fraction of canvas height
+    this.h = map(depth, 0, 1, 0.015, 0.065) * random(0.7, 1.4);   // fraction of canvas height
     this.weight = map(depth, 0, 1, 1.2, 3.5) * random(0.8, 1.2);
 
     this.restLean = random(-0.25, 0.25);              // small lean when there is no wind
@@ -155,7 +156,7 @@ class Flower {
   constructor(depth) {
     this.nx = random(0, 1);
     this.ny = lerp(ridgeY(this.nx), 1.0, depth);
-    this.stemHeight = map(depth, 0, 1, 0.025, 0.08) * random(0.8, 1.4);
+    this.stemHeight = map(depth, 0, 1, 0.02, 0.06) * random(0.8, 1.4);
     this.size = map(depth, 0, 1, 3.0, 8.0) * random(0.8, 1.3);
     this.noiseLocation = random(0, 10);
 
