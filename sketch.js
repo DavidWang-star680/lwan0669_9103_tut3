@@ -6,6 +6,8 @@
 //   user input-umberalla.js (Jiahui Zou) umbrella (click, mouse) -> setupUmbrella(), drawUmbrella()
 //   woman-figure.js    (SHARED code)  the woman's body        -> drawWoman(), drawWomanHand()
 //
+// The umbrella (user input) is linked to the meadow: it pushes the grass and opens the flowers.
+//
 // Drawing order (back to front): sky + clouds, woman, umbrella, her hand, meadow.
 // The meadow is last so the grass grows in front of her dress.
 //
@@ -28,6 +30,8 @@ function draw() {
   drawWoman();                                    // woman-figure.js (shared)
   drawUmbrella();                                 // user input-umberalla.js, held by the woman
   drawWomanHand();                                // woman-figure.js, her hand in front of the handle
+  updateGrassFromUmbrella(umbrella.angle);        // the grass leans the way the umbrella moves
+  updateFlowers(umbrella.isOpen);                 // flowers come out while the umbrella is open
   drawMeadow();                                   // perlin-grass.js, in front of everything
 }
 

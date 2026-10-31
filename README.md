@@ -4,7 +4,7 @@ An interactive p5.js reinterpretation of Claude Monet's *Woman with a Parasol �
 Each team member owns one mechanic that changes one layer of the painting.
 
 > Status: **Iteration 3** – the meadow (now only the bottom third of the canvas), the noise clouds, the seasonal sky, the woman and the umbrella all run together in one sketch.
-> Click the umbrella to open or close it; move the mouse to tilt it.
+> Click the umbrella to open or close it (flowers bloom while it is open); move the mouse to tilt it (the grass leans the same way).
 
 ## How to run
 
@@ -46,6 +46,9 @@ Every technique below was taught in the course; the Canvas module is in brackets
 - **Clouds (iteration 2), in `perlin-clouds.js`** – one `NoiseCloud` object per cloud, drawn with Fei's cloud shapes. `random()` (Weeks 6 and 8) chooses once each cloud's size, shape, tilt, starting place and drift speed. `noise()` (Week 8) then moves it up and down and sideways, changes its size and tilts it a little, a bit like the grass, so no cloud repeats. The `%` remainder (Week 8) makes clouds drift to the right and re-enter on the left. `scale(1, thickness)` and `translate()` (Week 11) make clouds flatter or taller. `lerp()` (Week 11) slides the season values smoothly between two seasons.
 - **Clouds follow the season** (the season clock is Fei's `seasonFrame`): spring is the default; summer has more clouds and they are thicker; autumn has fewer, thinner clouds that float higher; winter has even fewer clouds than autumn, but they are thicker. Clouds fade in and out when the cloud cover passes their rank, and the biggest clouds are the last to disappear.
 - **`line()`, `ellipse()`, `stroke()`, `strokeWeight()`, `fill()`, `noStroke()`** (Weeks 6, 8) draw the blades and flowers. **`beginShape()`, `vertex()`, `endShape()`** (Week 10) draw the dark ground under the grass.
+- **Grass linked to the umbrella (iteration 4):** `updateGrassFromUmbrella()` measures how fast the umbrella's tilt angle changes each frame, eases it with `lerp()` (Week 11) and `constrain()` (Week 6) into a push between -1 and 1, and adds it to every blade's bend in `getBend()`. The grass leans the way the umbrella moves. When the umbrella stands still the push eases back to 0, so only the `noise()` wind is left.
+- **Flowers bloom when the umbrella opens (iteration 4):** every `Flower` gets a random `bloomAt` number with `random()`. While `umbrella.isOpen` is true, `flowerBloom` grows from 0 to 1 (and shrinks again when the umbrella is closed), so flowers appear one after another and their stems and petals grow with `constrain()`. There are eight random colours (chosen with an `if / else if` chain, Week 4), and each head is five petals placed in a circle with `Math.cos()` / `Math.sin()` (Week 5) and a `for` loop (Week 4).
+- **Slower clouds (iteration 4):** the noise step and the drift speed of the clouds were reduced, so they move about as calmly as the grass.
 - **`windowResized()` and `resizeCanvas()`** (Week 8) – positions are stored as fractions of the canvas, so the meadow rescales with the browser window.
 
 ## Techniques (Jiahui Zou - user input) and shared code
@@ -65,6 +68,7 @@ Every technique below was taught in the course; the Canvas module is in brackets
 
 - **Lizuo Wang** used Claude (Anthropic) to help write `perlin-grass.js`, `sketch.js` and `index.html` for iteration 1: the structure of the `GrassBlade` and `Flower` classes, the wind calculation and the layout of the project. Claude also helped check that only techniques taught in the course were used. Lizuo reads, tests and adjusts the generated code. AI-assisted code is also marked in comments at the top of each file.
 - **Iteration 2:** Lizuo used Claude (Anthropic) to write `perlin-clouds.js` (the `NoiseCloud` class and the season blending), to join `time-based-sky.js` to the main sketch (its `setup()` and `draw()` were moved or renamed so there is only one of each in the project, and its fixed season cloud calls were replaced by `drawNoiseClouds()`), and to rewrite `sketch.js` and `index.html` so the sky, clouds and meadow run together. Fei's own code is unchanged apart from those edits, which are listed in the comment at the top of `time-based-sky.js`.
+- **Iteration 4:** Lizuo used Claude (Anthropic) to write the link between the umbrella and the meadow (`updateGrassFromUmbrella()`, `updateFlowers()`, the flower colours and petals) and to slow down the clouds.
 - **Iteration 3:** Lizuo used Claude (Anthropic) to write `woman-figure.js` (the shared woman's body), to join Jiahui's umbrella file to the main sketch (his `setup()` / `draw()` became `setupUmbrella()` / `drawUmbrella()`, the fixed canvas and background were removed, the umbrella now follows the woman's hand and is scaled, and `mousePressed()` takes the scale into account; listed in the comment at the top of his file), and to retune `perlin-grass.js` and `perlin-clouds.js` for the smaller meadow.
 - The team used ChatGPT to generate a concept image shown in the Week 9 presentation. It is not part of this project.
 
@@ -73,6 +77,7 @@ Every technique below was taught in the course; the Canvas module is in brackets
 1. **Iteration 1** – swaying meadow: `noise()` wind waves, random blades and flowers.
 2. **Iteration 2** – clouds that move and change with `noise()` and `random()`, and follow the seasons of the time-based sky.
 3. **Iteration 3** – the meadow shrinks to the bottom third of the canvas (fewer rows, shorter blades; the cloud height bands were moved up to fit); the woman and Jiahui's umbrella are added to the main sketch.
+4. **Iteration 4** – the clouds move slower; the grass leans the way the umbrella moves (and keeps swaying with noise when it is still); no flowers at the start, they bloom in eight colours after the umbrella is opened.
 
 ## External references
 

@@ -10,6 +10,7 @@
 //   - The umbrella is held by the woman: every frame it is moved to her hand
 //     (getWomanHand() in woman-figure.js) and scaled with umbrellaScale().
 //   - mousePressed() now takes that scale into account.
+//   - The sway is wider: -40 to +40 degrees instead of -8 to +8, and it follows the mouse faster (Lizuo, iteration 4).
 //
 // AI note: written with the help of Claude (Anthropic).
 // "(Week N)" = the Canvas module where the course teaches that technique.
@@ -77,13 +78,14 @@ function mousePressed() {
   // The middle of the canopy is straight above the handle, halfway
   // between the rim and the tip. rimY and tipY are measured from the
   // handle, so we add umbrella.y to turn them into canvas positions.
-  // (The umbrella only tilts by about 8 degrees, so we can ignore the
-  // tilt here — the click area below is large enough to cover it.)
   // The umbrella is drawn scaled by umbrellaScale(), so the distances from the
   // handle are multiplied by it.
   let k = umbrellaScale();
-  let centreX = umbrella.x;
-  let centreY = umbrella.y + k * (s.rimY + umbrella.tipY) / 2;
+  // The umbrella can tilt a lot now, so the canopy middle is turned around the
+  // handle by the same angle (rotating a point with sin() and cos(), Week 8).
+  let c = (s.rimY + umbrella.tipY) / 2;             // distance above the handle (negative)
+  let centreX = umbrella.x - k * c * sin(umbrella.angle);
+  let centreY = umbrella.y + k * c * cos(umbrella.angle);
 
   // How close the click needs to be. Use the current canopy width,
   // but never less than 90 pixels, so the CLOSED umbrella (which is
@@ -171,14 +173,14 @@ class Umbrella {
     let mx = constrain(mouseX, 0, width);
 
     // Convert the mouse x range (0 to width) into an angle range
-    // (-8 to +8 degrees).
+    // (-40 to +40 degrees).
     // Mouse on the left  -> negative angle -> tilts left.
     // Mouse on the right -> positive angle -> tilts right.
-    let targetAngle = map(mx, 0, width, -8, 8);
+    let targetAngle = map(mx, 0, width, -40, 40);
 
-    // Ease the angle towards the target as well (6% per frame), so the
+    // Ease the angle towards the target as well (10% per frame), so the
     // umbrella follows the mouse softly instead of snapping to it.
-    this.angle = lerp(this.angle, targetAngle, 0.06);
+    this.angle = lerp(this.angle, targetAngle, 0.1);
   }
 
   // display() — draw the whole umbrella. Called once per frame.

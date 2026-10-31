@@ -127,7 +127,7 @@ class NoiseCloud {
     this.homeX = random(-0.1, 1.1);                 // where it starts sideways (fraction of width)
     this.row = random(0, 1);                        // 0 = top of the sky band ... 1 = bottom of it
     this.tilt = random(-10, 10);                    // tilt in degrees
-    this.driftSpeed = random(0.00003, 0.00009);     // how fast it drifts to the right
+    this.driftSpeed = random(0.00001, 0.00004);     // how fast it drifts to the right
     this.noiseLocation = random(0, 100);            // its own place in the noise
   }
 
@@ -206,7 +206,7 @@ function scatterClouds() {
 // Draw all the clouds for this moment in the season. Called from Fei's drawSky().
 function drawNoiseClouds(seasonFrame) {
   cloudClock = cloudClock + 1;
-  cloudNoiseTime = cloudNoiseTime + 0.003;          // small step = slow change
+  cloudNoiseTime = cloudNoiseTime + 0.0008;         // small step = slow change
 
   let blend = getSeasonBlend(seasonFrame);
   for (let i = 0; i < noiseClouds.length; i++) {

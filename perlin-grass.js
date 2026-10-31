@@ -25,11 +25,13 @@
 // =====================================================================
 const bladeRows = 24;       // depth rows from back to front          (const: Week 2)
 const bladesPerRow = 90;    // grass blades in each row
-const flowersPerRow = 14;   // flowers in each row
+const flowersPerRow = 18;   // flowers in each row (they only appear after the umbrella opens)
 
 const windScale = 3;        // size of the wind waves across the meadow (bigger = more, smaller waves)
 const windSpeed = 0.012;    // how fast the wind waves travel (bigger = faster)
 const maxBend = 0.8;        // how far blades can bend in radians (bigger = wilder)
+const umbrellaPushBend = 0.7;   // how far the moving umbrella pushes the grass, in radians
+const bloomSpeed = 0.004;       // how fast the flowers appear (per frame; 0.004 = about 4 seconds)
 
 // =====================================================================
 // 2. VARIABLES THAT CHANGE WHILE THE SKETCH RUNS
@@ -41,6 +43,11 @@ let noiseTime = 0;              // our position in the noise; it grows, so the w
 let windStrength = 0.7;         // current wind, 0 = calm ... 1 = strong
 let targetWindStrength = 0.7;   // the wind we are easing towards
 let unit = 1;                   // size of one "painting pixel" on this canvas (set every frame)
+
+// Linked to the umbrella (user input, Jiahui Zou):
+let umbrellaPush = 0;           // -1 = umbrella moving left ... 0 = still ... 1 = moving right
+let lastUmbrellaAngle = 0;      // the umbrella's angle in the last frame
+let flowerBloom = 0;            // 0 = no flowers yet ... 1 = all flowers are out
 
 // =====================================================================
 // 3. HELPER FUNCTIONS
@@ -95,7 +102,32 @@ function getBend(nx, ny, noiseLocation) {
   //    so no two blades move exactly the same.
   let flutter = (noise(noiseLocation + noiseTime * 2) - 0.5) * 0.6;
 
-  return (sway + flutter) * windStrength * maxBend;
+  // 4. When the umbrella moves, it pushes the grass the same way. When the
+  //    umbrella is still, umbrellaPush is 0 and only the noise wind is left.
+  return (sway + flutter) * windStrength * maxBend + umbrellaPush * umbrellaPushBend;
+}
+
+// Pick a flower colour at random, as [red, green, blue]. Eight colours,
+// like the poppies, cornflowers and buttercups of a summer meadow.
+function pickFlowerColour() {
+  let pick = random(0, 1);
+  if (pick < 0.20) {
+    return [236, 200, 60];     // yellow
+  } else if (pick < 0.32) {
+    return [245, 236, 200];    // cream
+  } else if (pick < 0.44) {
+    return [226, 130, 60];     // orange
+  } else if (pick < 0.58) {
+    return [238, 140, 170];    // pink
+  } else if (pick < 0.70) {
+    return [215, 60, 55];      // red, like a poppy
+  } else if (pick < 0.82) {
+    return [160, 120, 200];    // purple
+  } else if (pick < 0.92) {
+    return [110, 150, 225];    // blue, like a cornflower
+  } else {
+    return [250, 250, 245];    // white
+  }
 }
 
 // =====================================================================
@@ -157,24 +189,29 @@ class Flower {
     this.nx = random(0, 1);
     this.ny = lerp(ridgeY(this.nx), 1.0, depth);
     this.stemHeight = map(depth, 0, 1, 0.02, 0.06) * random(0.8, 1.4);
-    this.size = map(depth, 0, 1, 3.0, 8.0) * random(0.8, 1.3);
+    this.size = map(depth, 0, 1, 4.0, 11.0) * random(0.8, 1.3);
     this.noiseLocation = random(0, 10);
 
-    // Pick a colour at random: 60% yellow, 20% cream, 20% orange.
-    let pick = random(0, 1);
-    if (pick < 0.6) {
-      this.colour = [236, 200, 60];
-    } else if (pick < 0.8) {
-      this.colour = [245, 236, 200];
-    } else {
-      this.colour = [226, 130, 60];
-    }
+    this.colour = pickFlowerColour();
+    // the middle of the flower is a darker version of its colour
+    this.centre = [this.colour[0] * 0.6, this.colour[1] * 0.6, this.colour[2] * 0.6];
+
+    // The flower appears when flowerBloom passes this number, so the flowers
+    // come out one after another, not all at once.
+    this.bloomAt = random(0, 0.9);
   }
 
   display() {
+    // How far is this flower out? 0 = not there yet, 1 = fully grown.
+    // constrain(): Week 6
+    let grown = constrain((flowerBloom - this.bloomAt) * 8, 0, 1);
+    if (grown <= 0) {
+      return;                                       // nothing to draw
+    }
+
     let x = this.nx * width;
     let y = this.ny * height;
-    let h = this.stemHeight * height;
+    let h = this.stemHeight * height * grown;       // the stem grows up
 
     // same wind as the grass
     let angle = getBend(this.nx, this.ny, this.noiseLocation);
@@ -186,10 +223,18 @@ class Flower {
     strokeWeight(1 * unit);
     line(x, y, headX, headY);
 
-    // flower head. noStroke() and fill(): Week 6. ellipse(): Week 8, 10
+    // flower head: five petals around the middle, then the centre.
+    // noStroke() and fill(): Week 6. ellipse(): Week 8, 10
+    // The petals are placed in a circle with Math.cos() and Math.sin() (Week 5).
+    let size = this.size * unit * grown;
     noStroke();
     fill(this.colour[0], this.colour[1], this.colour[2]);
-    ellipse(headX, headY, this.size * unit, this.size * unit * 0.85);
+    for (let i = 0; i < 5; i++) {                   // for loop: Week 4
+      let a = i * 1.2566;                           // 72 degrees in radians
+      ellipse(headX + Math.cos(a) * size * 0.3, headY + Math.sin(a) * size * 0.3, size * 0.6, size * 0.6);
+    }
+    fill(this.centre[0], this.centre[1], this.centre[2]);
+    ellipse(headX, headY, size * 0.35, size * 0.35);
   }
 }
 
@@ -228,6 +273,29 @@ function setWindLevel(level) {
   if (level === 0) targetWindStrength = 0.25;
   if (level === 1) targetWindStrength = 0.7;
   if (level === 2) targetWindStrength = 1.0;
+}
+
+// Link the grass to the umbrella. sketch.js calls this every frame and passes
+// in the umbrella's tilt angle (in degrees). The grass is pushed by how fast
+// the umbrella MOVES, not by where it is: when the umbrella is still, the
+// push eases back to 0 and the grass sways with noise only.
+function updateGrassFromUmbrella(umbrellaAngle) {
+  let speed = umbrellaAngle - lastUmbrellaAngle;    // degrees moved since the last frame
+  lastUmbrellaAngle = umbrellaAngle;
+
+  // A speed of 1 degree per frame counts as a full push (-1 or 1).
+  let target = constrain(speed / 1.0, -1, 1);
+  umbrellaPush = lerp(umbrellaPush, target, 0.15);  // ease, so the grass does not jerk (Week 11)
+}
+
+// Flowers appear while the umbrella is open and go away again when it is closed.
+// sketch.js calls this every frame with umbrella.isOpen (true or false).
+function updateFlowers(umbrellaIsOpen) {
+  if (umbrellaIsOpen === true) {
+    flowerBloom = constrain(flowerBloom + bloomSpeed, 0, 1);
+  } else {
+    flowerBloom = constrain(flowerBloom - bloomSpeed, 0, 1);
+  }
 }
 
 // The dark soil / shadow under the grass: one filled shape that follows the
