@@ -18,6 +18,7 @@
 //   for loops, if / else if                                    (Week 4)
 //   beginShape(), vertex(), endShape(), fill(), noStroke()     (Week 6)
 //   map(), lerp(), constrain()                                 (Week 6, 10, 11)
+//   functions with parameters that return a value              (Week 4)
 //   AI note: written with the help of Claude (Anthropic).
 
 // =====================================================================
@@ -104,7 +105,7 @@ class GrassBlade {
     this.h = h;                                     // height
     this.w = w;                                     // width at its widest
     this.dark = colour;
-    this.light = [min(255, colour[0] * 1.12 + 8), min(255, colour[1] * 1.1 + 10), min(255, colour[2] * 1.04)];
+    this.light = [constrain(colour[0] * 1.12 + 8, 0, 255), constrain(colour[1] * 1.1 + 10, 0, 255), constrain(colour[2] * 1.04, 0, 255)];
     this.restLean = lean;                           // small lean when there is no wind
     this.noiseLocation = random(0, 10);             // own place in the noise
     this.ny = baseY / REF_H;
@@ -162,48 +163,42 @@ class GrassBlade {
 // Pick a random colour for one flower from natural wildflower colour families:
 //   yellow (buttercup, dandelion) 36%    orange (marigold, hawkweed) 28%
 //   red (poppy) 12%    pale green 14%    pale blue (forget-me-not) 10%
-// The colour is a different random number every time. The centre of the flower is a
-// darker shade of its OWN colour (same family, no strong contrast). colorMode(HSB)
-// lets us choose the hue directly; push() / pop() put the colour mode back.
+// Each family has two RGB colours at its ends (for example golden and lemon yellow).
+// random() picks a point between them with lerp() (Weeks 8 and 11), so the colour is a
+// different random number every time but always stays inside its family (no strong contrast).
+// The centre of the flower is the same colour made darker.
 // isPale = true gives soft cream-yellow or pale green flowers (the tall ones at the sides).
 // Returns an object { petal, centre }, each [r, g, b].
+function mixColour(colourA, colourB) {
+  let t = random(0, 1);
+  return [lerp(colourA[0], colourB[0], t), lerp(colourA[1], colourB[1], t), lerp(colourA[2], colourB[2], t)];
+}
+
 function pickFlowerColour(isPale) {
-  push();
-  colorMode(HSB, 360, 100, 100);
   let petal;
-  let centre;
+  let darkness;                                      // 1 = the centre is as light as the petals
   let family = random(0, 1);
   if (isPale) {
-    let hue = random(48, 100);                                       // cream-yellow to pale green
-    petal = color(hue, random(8, 24), 98);
-    centre = color(hue - 6, 40, 82);
+    petal = mixColour([250, 244, 215], [225, 244, 205]);    // cream-yellow to pale green
+    darkness = 0.8;
   } else if (family < 0.36) {
-    let hue = random(40, 58);                                        // yellow, golden yellow
-    petal = color(hue, random(55, 80), random(92, 100));
-    centre = color(hue - 6, 88, random(76, 86));
+    petal = mixColour([245, 195, 60], [250, 232, 105]);     // golden yellow to lemon yellow
+    darkness = 0.7;
   } else if (family < 0.64) {
-    let hue = random(18, 36);                                        // orange, amber
-    petal = color(hue, random(68, 88), random(92, 100));
-    centre = color(hue - 4, 90, random(66, 78));
+    petal = mixColour([240, 120, 45], [245, 170, 50]);      // orange to amber
+    darkness = 0.7;
   } else if (family < 0.76) {
-    let hue = (random(350, 380)) % 360;                              // red, crimson, coral
-    petal = color(hue, random(62, 82), random(80, 95));
-    centre = color(hue, 88, random(52, 64));
+    petal = mixColour([225, 60, 70], [235, 105, 65]);       // crimson to coral red
+    darkness = 0.65;
   } else if (family < 0.90) {
-    let hue = random(70, 110);                                       // fresh pale green
-    petal = color(hue, random(22, 42), random(88, 98));
-    centre = color(hue, 58, random(60, 72));
+    petal = mixColour([215, 235, 160], [190, 228, 170]);    // fresh pale green
+    darkness = 0.7;
   } else {
-    let hue = random(195, 220);                                      // pale blue
-    petal = color(hue, random(22, 42), random(92, 100));
-    centre = color(hue, 52, random(72, 82));
+    petal = mixColour([190, 225, 245], [185, 205, 245]);    // pale blue
+    darkness = 0.75;
   }
-  let result = {
-    petal: [red(petal), green(petal), blue(petal)],
-    centre: [red(centre), green(centre), blue(centre)]
-  };
-  pop();
-  return result;
+  let centre = [petal[0] * darkness, petal[1] * darkness, petal[2] * darkness];
+  return { petal: petal, centre: centre };
 }
 
 // =====================================================================
@@ -271,6 +266,21 @@ class Flower {
   }
 }
 
+// Where a row stands between the horizon (0) and the front of the picture (1).
+// lerp() between depth and depth * depth keeps the far rows closer together.
+function rowPosition(depth) {
+  return lerp(depth, depth * depth, 0.3);
+}
+
+// A random place near the left or the right edge of the picture (for the tall reeds and flowers).
+function sideX() {
+  if (random(0, 1) < 0.5) {
+    return random(0, 0.1);
+  } else {
+    return random(0.88, 1.0);
+  }
+}
+
 // =====================================================================
 // 6. BUILDING THE MEADOW
 // =====================================================================
@@ -281,10 +291,10 @@ function setupMeadow() {
     let row = [];
 
     // blades: bigger, fewer and closer to the bottom as the row gets nearer
-    let bladeCount = floor(lerp(46, 26, depth));
+    let bladeCount = lerp(46, 26, depth);            // the for loop below stops at the first whole number past it
     for (let i = 0; i < bladeCount; i++) {
       let nx = random(-0.03, 1.03);
-      let baseY = lerp(ridgeY(nx), REF_H * 1.04, pow(depth, 1.3));
+      let baseY = lerp(ridgeY(nx), REF_H * 1.04, rowPosition(depth));
       let h = lerp(55, 250, depth) * random(0.7, 1.3);
       let w = lerp(28, 88, depth) * random(0.8, 1.25);
       row.push(new GrassBlade(nx, baseY, h, w, pickGrassColour(nx, depth), random(-0.3, 0.3)));
@@ -294,7 +304,7 @@ function setupMeadow() {
     if (r >= 1) {
       for (let i = 0; i < flowersPerRow; i++) {
         let nx = random(0, 1);
-        let baseY = lerp(ridgeY(nx), REF_H * 1.04, pow(depth, 1.3));
+        let baseY = lerp(ridgeY(nx), REF_H * 1.04, rowPosition(depth));
         let stemH = lerp(50, 210, depth) * random(0.8, 1.4);
         let radius = lerp(11, 30, depth) * random(0.85, 1.2);
         row.push(new Flower(nx, baseY, stemH, radius, random(0, 1) < 0.15));
@@ -306,12 +316,12 @@ function setupMeadow() {
   // a few tall reeds and white flowers at the sides of the picture (they go in a near row)
   let reedRow = meadowRows[rowCount - 5];
   for (let i = 0; i < 14; i++) {
-    let nx = random(0, 1) < 0.5 ? random(0, 0.1) : random(0.88, 1.0);
+    let nx = sideX();
     let baseY = lerp(ridgeY(nx), REF_H * 1.04, 0.5);
     reedRow.push(new GrassBlade(nx, baseY, random(300, 420), random(12, 20), pickGrassColour(nx, 0.6), random(-0.15, 0.2)));
   }
   for (let i = 0; i < 10; i++) {
-    let nx = random(0, 1) < 0.5 ? random(0, 0.1) : random(0.88, 1.0);
+    let nx = sideX();
     let baseY = lerp(ridgeY(nx), REF_H * 1.04, 0.55);
     reedRow.push(new Flower(nx, baseY, random(280, 380), random(14, 22), true));
   }
@@ -335,9 +345,9 @@ function updateGrassFromUmbrella(angle) {
 // Flowers appear while the umbrella is open and slowly go again while it is closed.
 function updateFlowers(isOpen) {
   if (isOpen) {
-    flowerBloom = min(1, flowerBloom + bloomSpeed);
+    flowerBloom = constrain(flowerBloom + bloomSpeed, 0, 1);
   } else {
-    flowerBloom = max(0, flowerBloom - bloomSpeed);
+    flowerBloom = constrain(flowerBloom - bloomSpeed, 0, 1);
   }
 }
 
