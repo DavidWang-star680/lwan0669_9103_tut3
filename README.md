@@ -59,6 +59,24 @@ Every technique below was taught in the course; the Canvas module is in brackets
 
 - **User input (`user input-umberalla.js`, Jiahui Zou):** clicking the umbrella opens or closes it (`mousePressed()`, `dist()`), and moving the mouse left or right tilts it (`mouseX`, `map()`, `constrain()`). Both changes are eased with `lerp()` (Week 11), so nothing jumps. Jiahui should check and extend this section with his own wording.
 - **Woman's body (`woman-figure.js`, shared code):** drawn in a soft Ghibli-like style from a reference picture: straw hat with a blue ribbon, short hair, a face with eyes, a smile and blush, a white dress with a high collar, puffy sleeves, a blue sash and a long skirt blowing to the right. Smooth outlines are made by a small helper `curveVerts()` that places `vertex()` points along a curve with `lerp()` (Week 11) inside a `for` loop (Week 4); the rest uses `beginShape()`/`vertex()` (Week 10), `ellipse()`, `arc()`, `rect()`, `line()`, `triangle()`, `rotate()` and `push()`/`translate()`/`scale()`/`pop()` (Weeks 6, 8, 11), so she scales with the window. `getWomanHand()` returns an `{ x, y }` object (Week 4) that tells the umbrella where to be held.
+  
+## Techniques (Time-based – Fei Jiang)
+
+My mechanic creates a seasonal sky that automatically changes through spring, summer, autumn and winter.
+
+- **Time-based animation:** `drawSky()` uses `frameCount` and conditional statements to control the repeating seasonal cycle. Each season has its own time period.
+
+- **Sky colour transitions:** `lerpColor()` blends the colours between seasons, creating smooth transitions instead of sudden changes. Different RGB colours are used for each season.
+
+- **Cloud shapes:** I used `ellipse()` to create cloud shapes with different sizes and colours. My original design included different cloud arrangements for each season. In the integrated project, these cloud shapes are reused by the Perlin noise cloud mechanic.
+
+- **Moving sun:** My original `drawMovingSun()` function uses `lerp()` and `sin()` to move the sun along a curved path. The integrated version uses the updated `drawCycleSun()` function.
+
+- **Autumn leaves:** `drawAutumnLeaves()` uses `frameCount` to control falling movement and `sin()` to make leaves sway from side to side.
+
+- **Winter snow:** My original `drawSnow()` function uses different falling speeds and repeating positions. The integrated project uses the updated Perlin noise snowfall mechanic.
+
+These techniques allow the sky and seasonal elements to change automatically over time without user input.
 
 ## Key decisions
 
