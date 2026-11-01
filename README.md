@@ -96,6 +96,8 @@ These techniques allow the sky and seasonal elements to change automatically ove
 - **Iteration 4 (snow, season length):** Lizuo used Claude (Anthropic) to write `perlin-snow.js`, to tie the cloud fade to the season change, to make the seasons longer (one line in `time-based-sky.js`, plus the `drawNoiseSnow()` calls that replace `drawSnow()`) and to thicken the grass at the horizon.
 - **Iteration 4 (later):** Lizuo used Claude (Anthropic) to redraw the woman in more detail (`woman-figure.js`), to slow the grass's reaction to the umbrella, to remove the wind-level keys and to slow the season clock in `time-based-sky.js` (one line, noted in its header).
 - The team used ChatGPT to generate a concept image shown in the Week 9 presentation. It is not part of this project.
+  
+- **Fei Jiang:** I used ChatGPT (OpenAI) to assist with developing and refining my time-based seasonal sky mechanic. ChatGPT helped with the seasonal timing, smooth colour transitions, cloud drawing, moving sun, falling leaves and snowfall animations. It also helped me understand the functions and add explanatory comments to the code. I reviewed and adjusted the code through several iterations. The AI-assisted sections are explained in the comments of my original `time-based-sky.js`.
 
 ## Iterations (Lizuo Wang)
 
