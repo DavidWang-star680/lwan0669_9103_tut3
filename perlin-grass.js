@@ -1,49 +1,44 @@
 // perlin-grass.js
-// MECHANIC: Perlin noise and randomness  (owner: Lizuo Wang)
-// Iteration 1 (version 3): a swaying meadow with scattered flowers, on its own
-// (no painting image yet).
+// PERLIN NOISE AND RANDOMNESS mechanic (part 2): the meadow and the flowers.
 //
-// AI note: this file was written with the help of Claude (Anthropic).
-// Claude generated the structure and the wind logic; I read, tested and
-// adjusted it.
+// * Big flat grass blades, drawn row by row from the far hill to the front.
+//   Every blade gets random numbers (size, lean, colour) that are stored in its
+//   constructor, so they do not change from frame to frame.
+// * Perlin noise makes the wind: a smooth wave rolls over the meadow, so
+//   neighbouring blades sway together. noise() also makes soft patches of the
+//   meadow greener or more yellow.
+// * The meadow is LINKED to the umbrella (user-input-umbrella.js):
+//     - when the umbrella moves, the grass leans the same way (umbrellaPush)
+//     - while the umbrella is open, buttercups grow in the meadow (flowerBloom)
 //
-// Only techniques taught in IDEA9103 are used. The tag "(Week N)" after a
-// technique is the Canvas module where the course teaches it
-// (Week 6 = p5.js, Week 7 = Object Oriented Programming,
-//  Week 8 = Procedural Patterns / Perlin noise, Week 10 = Sound,
-//  Week 11 = Easing and Animation; Weeks 2-4 = JavaScript basics).
-//
-// HOW IT FITS WITH sketch.js
-//   sketch.js calls  setupMeadow()  once in setup()
-//                    drawMeadow()   every frame in draw()
-//   The wind is always a gentle breeze (windStrength = 0.25, the lowest level).
-//   All positions are stored as fractions (0 - 1) of the canvas, so the
-//   meadow rescales by itself when the browser window changes size.
+// Techniques ("(Week N)" = the Canvas module where it is taught):
+//   noise(), random()                                          (Week 8)
+//   class, constructor, this, methods                          (Week 7)
+//   arrays, array.push(), arrays of arrays                     (Week 3, 8)
+//   for loops, if / else if                                    (Week 4)
+//   beginShape(), vertex(), endShape(), fill(), noStroke()     (Week 6)
+//   map(), lerp(), constrain()                                 (Week 6, 10, 11)
+//   AI note: written with the help of Claude (Anthropic).
 
 // =====================================================================
 // 1. SETTINGS  (change these numbers to tune the look)
 // =====================================================================
-const bladeRows = 24;       // depth rows from back to front          (const: Week 2)
-const bladesPerRow = 130;    // grass blades in each row
-const flowersPerRow = 18;   // flowers in each row (they only appear after the umbrella opens)
+const rowCount = 15;            // rows of grass, from the far hill to the front
+const flowersPerRow = 5;        // buttercups in each row
 
-const windScale = 3;        // size of the wind waves across the meadow (bigger = more, smaller waves)
-const windSpeed = 0.012;    // how fast the wind waves travel (bigger = faster)
-const maxBend = 0.8;        // how far blades can bend in radians (bigger = wilder)
-const umbrellaPushBend = 0.45;  // how far the moving umbrella pushes the grass, in radians (small = a gentle breeze)
-const bloomSpeed = 0.004;       // how fast the flowers appear (per frame; 0.004 = about 4 seconds)
+const windScale = 3;            // size of the wind waves across the meadow
+const windSpeed = 0.005;        // how fast the wind waves travel (small = a slow, calm breeze)
+const windStrength = 0.2;       // a gentle breeze (0 = calm ... 1 = strong)
+const maxBend = 0.8;            // how far a blade can bend, in radians
+const umbrellaPushBend = 0.5;   // how far the moving umbrella pushes the grass, in radians
+const bloomSpeed = 0.004;       // how fast the flowers appear, per frame (0.004 = about 4 seconds)
 
 // =====================================================================
 // 2. VARIABLES THAT CHANGE WHILE THE SKETCH RUNS
 // =====================================================================
-let blades = [];                // all the GrassBlade objects (array: Week 3)
-let flowers = [];               // all the Flower objects
+let meadowRows = [];            // an array of rows; every row is an array of blades and flowers
+let noiseTime = 0;              // our position in the noise; it grows, so the wind moves
 
-let noiseTime = 0;              // our position in the noise; it grows, so the wind changes
-const windStrength = 0.25;      // the wind: a gentle breeze (0 = calm ... 1 = strong)
-let unit = 1;                   // size of one "painting pixel" on this canvas (set every frame)
-
-// Linked to the umbrella (user input, Jiahui Zou):
 let umbrellaPush = 0;           // -1 = umbrella moving left ... 0 = still ... 1 = moving right
 let lastUmbrellaAngle = 0;      // the umbrella's angle in the last frame
 let flowerBloom = 0;            // 0 = no flowers yet ... 1 = all flowers are out
@@ -52,319 +47,320 @@ let flowerBloom = 0;            // 0 = no flowers yet ... 1 = all flowers are ou
 // 3. HELPER FUNCTIONS
 // =====================================================================
 
-// Height of the top edge of the hill for a position nx (0 - 1 across the
-// canvas). The result is a fraction of the canvas height. The edge is a
-// gentle curve (a parabola), highest in the middle: 0.64 in the middle, 0.67 at the sides.
-// So the meadow fills only the bottom third of the canvas (iteration 3).
+// The top edge of the hill: y (in picture units) for a position nx from 0 to 1.
 function ridgeY(nx) {
-  return 0.64 + (nx - 0.5) * (nx - 0.5) * 0.12;
+  // 0.645 at both sides, about 0.75 near the woman's feet (sin() works in degrees here)
+  return (0.645 + 0.105 * sin(180 * nx) * sin(180 * nx)) * REF_H;
 }
 
-// Pick a colour for a blade, as [red, green, blue].
-// Far blades are dark blue-green, near blades are bright yellow-green,
-// like the meadow in Monet's painting. A few are olive or blue-green.
-function pickGrassColour(depth) {
-  let r = lerp(72, 125, depth);                   // lerp: Week 11
-  let g = lerp(118, 165, depth);
-  let b = lerp(80, 75, depth);
-
+// A colour for one blade, as [red, green, blue]. Blades are dark teal, green,
+// yellow-green or light green. noise() makes patches that are greener or yellower,
+// random() makes each blade a little different.
+function pickGrassColour(nx, depth) {
   let pick = random(0, 1);
-  if (pick < 0.15) {                              // if / else if: Week 4
-    r = r + 45;                                   // some olive-yellow blades
-    g = g - 5;
-    b = b - 5;
-  } else if (pick < 0.25) {
-    r = r - 15;                                   // some blue-green blades
-    g = g + 5;
-    b = b + 40;
-  }
-
-  let shade = random(0.85, 1.15);                 // a little brighter or darker
-  return [r * shade, g * shade, b * shade];
-}
-
-// How far a blade or flower is bent by the wind right now (an angle in radians).
-// Blades and flowers both use this, so they sway together.
-function getBend(nx, ny, noiseLocation) {
-  // 1. Smooth wind wave. noise() gives a value from 0 to 1 (Week 8).
-  //    Neighbouring positions give similar values, so neighbours sway together.
-  //    Subtracting noiseTime makes the waves roll across the meadow.
-  let wave = noise(nx * windScale + ny * 1.5 - noiseTime);
-
-  // 2. Turn the wave into a sway with map() (Week 10, 11).
-  //    noise() mostly stays between 0.2 and 0.8, so we stretch that part
-  //    to -0.6 ... 1.3. There is more push to the right than to the left,
-  //    like the blown scarf in the painting.
-  let sway = map(wave, 0.2, 0.8, -0.6, 1.3);
-
-  // 3. A small flutter for each blade (its own place in the noise),
-  //    so no two blades move exactly the same.
-  let flutter = (noise(noiseLocation + noiseTime * 2) - 0.5) * 0.6;
-
-  // 4. When the umbrella moves, it pushes the grass the same way. When the
-  //    umbrella is still, umbrellaPush is 0 and only the noise wind is left.
-  return (sway + flutter) * windStrength * maxBend + umbrellaPush * umbrellaPushBend;
-}
-
-// Pick a flower colour at random, as [red, green, blue]. Eight colours,
-// like the poppies, cornflowers and buttercups of a summer meadow.
-function pickFlowerColour() {
-  let pick = random(0, 1);
-  if (pick < 0.20) {
-    return [236, 200, 60];     // yellow
-  } else if (pick < 0.32) {
-    return [245, 236, 200];    // cream
-  } else if (pick < 0.44) {
-    return [226, 130, 60];     // orange
-  } else if (pick < 0.58) {
-    return [238, 140, 170];    // pink
-  } else if (pick < 0.70) {
-    return [215, 60, 55];      // red, like a poppy
+  let c;
+  if (pick < 0.32) {
+    c = [50, 108, 88];                  // dark teal green
+  } else if (pick < 0.62) {
+    c = [92, 150, 78];                  // fresh green
   } else if (pick < 0.82) {
-    return [160, 120, 200];    // purple
-  } else if (pick < 0.92) {
-    return [110, 150, 225];    // blue, like a cornflower
+    c = [150, 178, 78];                 // yellow-green
   } else {
-    return [250, 250, 245];    // white
+    c = [126, 176, 98];                 // light green
   }
+
+  let patch = noise(nx * 4, depth * 6 + 50);              // a smooth patch of colour
+  let yellowness = constrain(map(patch, 0.25, 0.75, -1, 1), -1, 1);
+  c = [c[0] + yellowness * 20, c[1] + yellowness * 6, c[2] - yellowness * 14];
+
+  let shade = random(0.88, 1.12);                         // a little brighter or darker
+  return [c[0] * shade, c[1] * shade, c[2] * shade];
+}
+
+// How far a blade or flower is bent by the wind right now, as an angle in radians.
+function getBend(nx, ny, noiseLocation) {
+  // 1. A smooth wave. Neighbouring places give similar values, so neighbours sway
+  //    together. Subtracting noiseTime makes the waves roll across the meadow.
+  let wave = noise(nx * windScale + ny * 1.5 - noiseTime);
+  // 2. map() stretches the part of the noise that is mostly used (0.2 - 0.8) to a
+  //    sway: a bit more push to the right than to the left, like a breeze.
+  let sway = map(wave, 0.2, 0.8, -0.6, 1.3);
+  // 3. A small flutter for each blade (its own place in the noise).
+  let flutter = (noise(noiseLocation + noiseTime * 1.5) - 0.5) * 0.6;
+  // 4. When the umbrella moves it pushes the grass the same way. When the umbrella
+  //    is still, umbrellaPush is 0 and only the noise wind is left.
+  return (sway + flutter) * windStrength * maxBend + umbrellaPush * umbrellaPushBend;
 }
 
 // =====================================================================
 // 4. CLASS: ONE BLADE OF GRASS  (class and constructor: Week 7)
 // =====================================================================
+// A blade is a curved leaf shape with two tones: a darker left half and a
+// lighter right half, like the flat painted grass of the reference picture.
 class GrassBlade {
-  constructor(depth) {
-    // depth: 0 = far away (top of meadow) ... 1 = close (bottom of meadow)
-    this.nx = random(0, 1);                           // random(a, b): Week 6, 8
-    this.ny = lerp(ridgeY(this.nx), 1.0, depth);      // below the hill edge
-
-    // Close blades are taller and thicker. map(): Week 10, 11
-    this.h = map(depth, 0, 1, 0.03, 0.07) * random(0.7, 1.4);   // fraction of canvas height
-    this.weight = map(depth, 0, 1, 1.7, 3.5) * random(0.8, 1.2);
-
-    this.restLean = random(-0.25, 0.25);              // small lean when there is no wind
-    this.noiseLocation = random(0, 10);               // own place in the noise
-
-    // Darker at the bottom of the blade, lighter and more yellow at the tip.
-    let c = pickGrassColour(depth);
-    this.baseColour = [c[0] * 0.75, c[1] * 0.8, c[2] * 0.75];
-    this.tipColour = [min(255, c[0] * 1.15 + 10), min(255, c[1] * 1.2 + 14), c[2]];   // min: Week 8, 10
+  constructor(nx, baseY, h, w, colour, lean) {
+    this.nx = nx;                                   // across the picture, 0 - 1
+    this.baseY = baseY;                             // where the blade starts, in picture units
+    this.h = h;                                     // height
+    this.w = w;                                     // width at its widest
+    this.dark = colour;
+    this.light = [min(255, colour[0] * 1.12 + 8), min(255, colour[1] * 1.1 + 10), min(255, colour[2] * 1.04)];
+    this.restLean = lean;                           // small lean when there is no wind
+    this.noiseLocation = random(0, 10);             // own place in the noise
+    this.ny = baseY / REF_H;
   }
 
   display() {
-    // where the bottom of the blade is, in canvas pixels
-    // (width and height are the canvas size: Week 6)
-    let x = this.nx * width;
-    let y = this.ny * height;
-    let h = this.h * height;
+    // angle of the tip: 0 = straight up, positive = leaning right
+    let bend = constrain(this.restLean + getBend(this.nx, this.ny, this.noiseLocation), -1.1, 1.1);
+    let x0 = this.nx * REF_W;
 
-    // angle of the tip: 0 = straight up, positive = leaning right.
-    // constrain() stops it bending too far (Week 6).
-    let angle = constrain(this.restLean + getBend(this.nx, this.ny, this.noiseLocation), -0.9, 0.9);
+    // points along the middle of the blade, and half the width at each point
+    let steps = 7;
+    let midX = [];
+    let midY = [];
+    let half = [];
+    let cosA = [];
+    let sinA = [];
+    for (let i = 0; i <= steps; i++) {
+      let t = i / steps;
+      let a = bend * t;                             // the blade turns more and more towards the tip
+      // The bend angle is in radians, but the sketch uses angleMode(DEGREES), so we
+      // use JavaScript's Math.sin() and Math.cos() here, which always use radians.
+      midX.push(x0 + this.h * t * Math.sin(a));
+      midY.push(this.baseY - this.h * t * Math.cos(a));
+      half.push(this.w * 0.5 * sin(180 * (0.25 + 0.75 * t)));  // wide near the bottom, pointed at the tip
+      cosA.push(Math.cos(a));
+      sinA.push(Math.sin(a));
+    }
 
-    // The blade is two short lines. The middle leans less than the tip,
-    // so the blade looks curved. We use JavaScript's Math.sin() and Math.cos() (Week 5)
-    // here, not p5's sin() and cos(), because the sketch uses angleMode(DEGREES).
-    let midX = x + Math.sin(angle * 0.4) * h * 0.5;
-    let midY = y - Math.cos(angle * 0.4) * h * 0.5;
-    let tipX = x + Math.sin(angle) * h;
-    let tipY = y - Math.cos(angle) * h;
+    noStroke();
+    // the whole blade in the darker colour
+    fill(this.dark[0], this.dark[1], this.dark[2]);
+    beginShape();
+    for (let i = 0; i <= steps; i++) {
+      vertex(midX[i] - cosA[i] * half[i], midY[i] - sinA[i] * half[i]);
+    }
+    for (let i = steps; i >= 0; i--) {
+      vertex(midX[i] + cosA[i] * half[i], midY[i] + sinA[i] * half[i]);
+    }
+    endShape(CLOSE);
 
-    strokeWeight(this.weight * unit);                 // strokeWeight, stroke, line: Week 6
-    stroke(this.baseColour[0], this.baseColour[1], this.baseColour[2]);
-    line(x, y, midX, midY);
-    stroke(this.tipColour[0], this.tipColour[1], this.tipColour[2]);
-    line(midX, midY, tipX, tipY);
+    // the right half again in the lighter colour
+    fill(this.light[0], this.light[1], this.light[2]);
+    beginShape();
+    for (let i = 0; i <= steps; i++) {
+      vertex(midX[i], midY[i]);
+    }
+    for (let i = steps; i >= 0; i--) {
+      vertex(midX[i] + cosA[i] * half[i], midY[i] + sinA[i] * half[i]);
+    }
+    endShape(CLOSE);
   }
 }
 
+// Pick a random colour for one flower from natural wildflower colour families:
+//   yellow (buttercup, dandelion) 36%    orange (marigold, hawkweed) 28%
+//   red (poppy) 12%    pale green 14%    pale blue (forget-me-not) 10%
+// The colour is a different random number every time. The centre of the flower is a
+// darker shade of its OWN colour (same family, no strong contrast). colorMode(HSB)
+// lets us choose the hue directly; push() / pop() put the colour mode back.
+// isPale = true gives soft cream-yellow or pale green flowers (the tall ones at the sides).
+// Returns an object { petal, centre }, each [r, g, b].
+function pickFlowerColour(isPale) {
+  push();
+  colorMode(HSB, 360, 100, 100);
+  let petal;
+  let centre;
+  let family = random(0, 1);
+  if (isPale) {
+    let hue = random(48, 100);                                       // cream-yellow to pale green
+    petal = color(hue, random(8, 24), 98);
+    centre = color(hue - 6, 40, 82);
+  } else if (family < 0.36) {
+    let hue = random(40, 58);                                        // yellow, golden yellow
+    petal = color(hue, random(55, 80), random(92, 100));
+    centre = color(hue - 6, 88, random(76, 86));
+  } else if (family < 0.64) {
+    let hue = random(18, 36);                                        // orange, amber
+    petal = color(hue, random(68, 88), random(92, 100));
+    centre = color(hue - 4, 90, random(66, 78));
+  } else if (family < 0.76) {
+    let hue = (random(350, 380)) % 360;                              // red, crimson, coral
+    petal = color(hue, random(62, 82), random(80, 95));
+    centre = color(hue, 88, random(52, 64));
+  } else if (family < 0.90) {
+    let hue = random(70, 110);                                       // fresh pale green
+    petal = color(hue, random(22, 42), random(88, 98));
+    centre = color(hue, 58, random(60, 72));
+  } else {
+    let hue = random(195, 220);                                      // pale blue
+    petal = color(hue, random(22, 42), random(92, 100));
+    centre = color(hue, 52, random(72, 82));
+  }
+  let result = {
+    petal: [red(petal), green(petal), blue(petal)],
+    centre: [red(centre), green(centre), blue(centre)]
+  };
+  pop();
+  return result;
+}
+
 // =====================================================================
-// 5. CLASS: ONE FLOWER
+// 5. CLASS: ONE FLOWER (a new random colour every time the umbrella is opened again)
 // =====================================================================
-// Everything is chosen once with random() in the constructor and then kept,
-// so the flowers do not flicker. A new scatter = make new Flower objects.
 class Flower {
-  constructor(depth) {
-    this.nx = random(0, 1);
-    this.ny = lerp(ridgeY(this.nx), 1.0, depth);
-    this.stemHeight = map(depth, 0, 1, 0.02, 0.06) * random(0.8, 1.4);
-    this.size = map(depth, 0, 1, 4.0, 11.0) * random(0.8, 1.3);
+  constructor(nx, baseY, stemH, radius, isWhite) {
+    this.nx = nx;
+    this.baseY = baseY;
+    this.ny = baseY / REF_H;
+    this.stemH = stemH;
+    this.radius = radius;
     this.noiseLocation = random(0, 10);
+    this.restLean = random(-0.2, 0.2);
+    this.spin = random(0, TWO_PI);                  // each flower is turned a different way
+    this.bloomAt = random(0, 0.9);                  // flowerBloom must pass this number for the flower to appear
+    this.isWhite = isWhite;                         // true = a pale (cream or pale green) flower
+    this.wasHidden = false;
+    this.newColour();
+  }
 
-    this.colour = pickFlowerColour();
-    // the middle of the flower is a darker version of its colour
-    this.centre = [this.colour[0] * 0.6, this.colour[1] * 0.6, this.colour[2] * 0.6];
-
-    // The flower appears when flowerBloom passes this number, so the flowers
-    // come out one after another, not all at once.
-    this.bloomAt = random(0, 0.9);
+  // A new random colour. This is called every time the flower disappears, so when the
+  // umbrella is opened again the flower comes back in a different colour.
+  newColour() {
+    let flowerColour = pickFlowerColour(this.isWhite);
+    this.petal = flowerColour.petal;
+    this.centre = flowerColour.centre;
   }
 
   display() {
-    // How far is this flower out? 0 = not there yet, 1 = fully grown.
-    // constrain(): Week 6
-    let grown = constrain((flowerBloom - this.bloomAt) * 8, 0, 1);
-    if (grown <= 0) {
-      return;                                       // nothing to draw
+    // grows from nothing to full size between flowerBloom = bloomAt and bloomAt + 0.12
+    let grow = constrain((flowerBloom - this.bloomAt) / 0.12, 0, 1);
+    if (grow <= 0) {
+      if (!this.wasHidden) {                        // it has just disappeared: choose its next colour
+        this.newColour();
+        this.wasHidden = true;
+      }
+      return;
     }
+    this.wasHidden = false;
+    let bend = this.restLean + getBend(this.nx, this.ny, this.noiseLocation) * 1.2;
+    let x0 = this.nx * REF_W;
+    let h = this.stemH * grow;
+    let tipX = x0 + h * Math.sin(bend);             // Math.sin / Math.cos: the bend is in radians
+    let tipY = this.baseY - h * Math.cos(bend);
+    let midX = x0 + h * 0.5 * Math.sin(bend * 0.4);
+    let midY = this.baseY - h * 0.5 * Math.cos(bend * 0.4);
 
-    let x = this.nx * width;
-    let y = this.ny * height;
-    let h = this.stemHeight * height * grown;       // the stem grows up
+    // the stem: two short lines, so it looks curved
+    stroke(76, 128, 74);
+    strokeWeight(4);
+    line(x0, this.baseY, midX, midY);
+    line(midX, midY, tipX, tipY);
 
-    // same wind as the grass
-    let angle = getBend(this.nx, this.ny, this.noiseLocation);
-    let headX = x + Math.sin(angle) * h;
-    let headY = y - Math.cos(angle) * h;
-
-    // thin green stem
-    stroke(70, 100, 60);
-    strokeWeight(1 * unit);
-    line(x, y, headX, headY);
-
-    // flower head: five petals around the middle, then the centre.
-    // noStroke() and fill(): Week 6. ellipse(): Week 8, 10
-    // The petals are placed in a circle with Math.cos() and Math.sin() (Week 5).
-    let size = this.size * unit * grown;
+    // the flower head: five round petals and a centre
     noStroke();
-    fill(this.colour[0], this.colour[1], this.colour[2]);
-    for (let i = 0; i < 5; i++) {                   // for loop: Week 4
-      let a = i * 1.2566;                           // 72 degrees in radians
-      ellipse(headX + Math.cos(a) * size * 0.3, headY + Math.sin(a) * size * 0.3, size * 0.6, size * 0.6);
+    let r = this.radius * grow;
+    fill(this.petal[0], this.petal[1], this.petal[2]);
+    for (let i = 0; i < 5; i++) {
+      let a = this.spin + (TWO_PI * i) / 5;
+      ellipse(tipX + Math.cos(a) * r * 0.55, tipY + Math.sin(a) * r * 0.55, r * 0.95, r * 0.95);
     }
     fill(this.centre[0], this.centre[1], this.centre[2]);
-    ellipse(headX, headY, size * 0.35, size * 0.35);
+    ellipse(tipX, tipY, r * 0.5, r * 0.5);
   }
 }
 
 // =====================================================================
-// 6. FUNCTIONS THAT sketch.js CALLS
+// 6. BUILDING THE MEADOW
 // =====================================================================
-
-// Make all the grass and flowers. Called once from setup().
-// Objects are made row by row from far (top) to near (bottom). Drawing in
-// the same order paints far things first and near things on top of them.
 function setupMeadow() {
-  blades = [];
-  for (let r = 0; r < bladeRows; r++) {               // for loop: Week 4
-    for (let i = 0; i < bladesPerRow; i++) {
-      let depth = (r + random(0, 1)) / bladeRows;     // somewhere inside row r
-      blades.push(new GrassBlade(depth));             // push(): Week 7, 8
+  meadowRows = [];
+  for (let r = 0; r < rowCount; r++) {
+    let depth = r / (rowCount - 1);                 // 0 = far hill ... 1 = front of the picture
+    let row = [];
+
+    // blades: bigger, fewer and closer to the bottom as the row gets nearer
+    let bladeCount = floor(lerp(46, 26, depth));
+    for (let i = 0; i < bladeCount; i++) {
+      let nx = random(-0.03, 1.03);
+      let baseY = lerp(ridgeY(nx), REF_H * 1.04, pow(depth, 1.3));
+      let h = lerp(55, 250, depth) * random(0.7, 1.3);
+      let w = lerp(28, 88, depth) * random(0.8, 1.25);
+      row.push(new GrassBlade(nx, baseY, h, w, pickGrassColour(nx, depth), random(-0.3, 0.3)));
     }
-  }
-  scatterFlowers();
-}
 
-// Throw the flowers down again in new random places.
-function scatterFlowers() {
-  flowers = [];
-  for (let r = 0; r < bladeRows; r++) {
-    for (let i = 0; i < flowersPerRow; i++) {
-      let depth = (r + random(0, 1)) / bladeRows;
-      flowers.push(new Flower(depth));
+    // buttercups stand in the same row, after its blades
+    if (r >= 1) {
+      for (let i = 0; i < flowersPerRow; i++) {
+        let nx = random(0, 1);
+        let baseY = lerp(ridgeY(nx), REF_H * 1.04, pow(depth, 1.3));
+        let stemH = lerp(50, 210, depth) * random(0.8, 1.4);
+        let radius = lerp(11, 30, depth) * random(0.85, 1.2);
+        row.push(new Flower(nx, baseY, stemH, radius, random(0, 1) < 0.15));
+      }
     }
+    meadowRows.push(row);                           // array of arrays: Week 3
   }
+
+  // a few tall reeds and white flowers at the sides of the picture (they go in a near row)
+  let reedRow = meadowRows[rowCount - 5];
+  for (let i = 0; i < 14; i++) {
+    let nx = random(0, 1) < 0.5 ? random(0, 0.1) : random(0.88, 1.0);
+    let baseY = lerp(ridgeY(nx), REF_H * 1.04, 0.5);
+    reedRow.push(new GrassBlade(nx, baseY, random(300, 420), random(12, 20), pickGrassColour(nx, 0.6), random(-0.15, 0.2)));
+  }
+  for (let i = 0; i < 10; i++) {
+    let nx = random(0, 1) < 0.5 ? random(0, 0.1) : random(0.88, 1.0);
+    let baseY = lerp(ridgeY(nx), REF_H * 1.04, 0.55);
+    reedRow.push(new Flower(nx, baseY, random(280, 380), random(14, 22), true));
+  }
+
+  flowerBloom = 0;
 }
 
-// Link the grass to the umbrella. sketch.js calls this every frame and passes
-// in the umbrella's tilt angle (in degrees). The grass is pushed by how fast
-// the umbrella MOVES, not by where it is: when the umbrella is still, the
-// push eases back to 0 and the grass sways with noise only.
-function updateGrassFromUmbrella(umbrellaAngle) {
-  let speed = umbrellaAngle - lastUmbrellaAngle;    // degrees moved since the last frame
-  lastUmbrellaAngle = umbrellaAngle;
-
-  // A speed of 2 degrees per frame counts as a full push (-1 or 1).
-  let target = constrain(speed / 2, -1, 1);
-  umbrellaPush = lerp(umbrellaPush, target, 0.016); // a small number = the grass follows slowly, like a breeze (Week 11)
+// =====================================================================
+// 7. LINKS TO THE UMBRELLA
+// =====================================================================
+// The grass leans the way the umbrella moves. How fast the umbrella turns
+// (its angle in degrees now minus its angle in the last frame) becomes a push of -1 ... 1.
+// lerp() makes the grass follow slowly, like a breeze, and fall back to calm.
+function updateGrassFromUmbrella(angle) {
+  let speed = angle - lastUmbrellaAngle;
+  lastUmbrellaAngle = angle;
+  let target = constrain(speed / 4, -1, 1);
+  umbrellaPush = lerp(umbrellaPush, target, 0.04);
 }
 
-// Flowers appear while the umbrella is open and go away again when it is closed.
-// sketch.js calls this every frame with umbrella.isOpen (true or false).
-function updateFlowers(umbrellaIsOpen) {
-  if (umbrellaIsOpen === true) {
-    flowerBloom = constrain(flowerBloom + bloomSpeed, 0, 1);
+// Flowers appear while the umbrella is open and slowly go again while it is closed.
+function updateFlowers(isOpen) {
+  if (isOpen) {
+    flowerBloom = min(1, flowerBloom + bloomSpeed);
   } else {
-    flowerBloom = constrain(flowerBloom - bloomSpeed, 0, 1);
+    flowerBloom = max(0, flowerBloom - bloomSpeed);
   }
 }
 
-// The dark soil / shadow under the grass: one filled shape that follows the
-// top edge of the hill, so no background shows between the blades.
-// beginShape(), vertex(), endShape(): Week 10
-function drawGround() {
+// =====================================================================
+// 8. DRAWING THE MEADOW  (called every frame, drawn last: it is in front)
+// =====================================================================
+function drawMeadow() {
+  noiseTime = noiseTime + windSpeed;
+
+  // the ground behind the blades
   noStroke();
-  fill(38, 66, 52);
+  fill(116, 156, 70);
   beginShape();
   for (let i = 0; i <= 20; i++) {
-    let nx = i / 20;
-    vertex(nx * width, ridgeY(nx) * height);
+    vertex((i / 20) * REF_W, ridgeY(i / 20));
   }
-  vertex(width, height);
-  vertex(0, height);
-  endShape();
-}
+  vertex(REF_W, REF_H + 10);
+  vertex(0, REF_H + 10);
+  endShape(CLOSE);
 
-// Soft haze along the top edge of the hill, so the meadow melts into the sky
-// instead of ending in a hard line. It is made of many thin strips that follow
-// the edge; the strips get more transparent the further they are from it.
-// The colour is the sky colour at the horizon (getHazeColour() in perlin-clouds.js).
-// beginShape(), vertex(), endShape(): Week 10; for loops: Week 4
-function drawHorizonHaze() {
-  let c = getHazeColour(currentBlend);
-  let steps = 24;                                   // strips above the edge
-  let stripH = 3.5 * unit;                          // height of one strip
-  noStroke();
-
-  for (let j = 0; j < steps; j++) {
-    let fade = 1 - j / steps;                       // 1 at the edge ... 0 at the top
-    fill(c[0], c[1], c[2], 120 * fade * fade);
-    beginShape();
-    for (let i = 0; i <= 20; i++) {                 // along the edge, left to right
-      let nx = i / 20;
-      vertex(nx * width, ridgeY(nx) * height - j * stripH);
-    }
-    for (let i = 20; i >= 0; i--) {                 // and back, one strip higher
-      let nx = i / 20;
-      vertex(nx * width, ridgeY(nx) * height - (j + 1) * stripH);
-    }
-    endShape();
-  }
-
-  let below = 10;                                   // strips below the edge, over the dark ground
-  for (let j = 0; j < below; j++) {
-    let fade = 1 - j / below;
-    fill(c[0], c[1], c[2], 90 * fade * fade);
-    beginShape();
-    for (let i = 0; i <= 20; i++) {
-      let nx = i / 20;
-      vertex(nx * width, ridgeY(nx) * height + j * stripH);
-    }
-    for (let i = 20; i >= 0; i--) {
-      let nx = i / 20;
-      vertex(nx * width, ridgeY(nx) * height + (j + 1) * stripH);
-    }
-    endShape();
-  }
-}
-
-// Draw the meadow. Called every frame from draw().
-function drawMeadow() {
-  unit = min(width, height) / 800;      // so lines and flowers scale with the window
-
-  // move through the noise
-  noiseTime += windSpeed * (0.6 + windStrength);
-
-  drawGround();
-  drawHorizonHaze();                    // soft mist where the hill meets the sky
-
-  // draw row by row: the blades of a row, then the flowers of that row
-  for (let r = 0; r < bladeRows; r++) {
-    for (let i = 0; i < bladesPerRow; i++) {
-      blades[r * bladesPerRow + i].display();
-    }
-    for (let i = 0; i < flowersPerRow; i++) {
-      flowers[r * flowersPerRow + i].display();
+  for (let r = 0; r < meadowRows.length; r++) {
+    for (let i = 0; i < meadowRows[r].length; i++) {
+      meadowRows[r][i].display();
     }
   }
 }
