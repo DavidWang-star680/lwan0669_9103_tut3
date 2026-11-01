@@ -1,53 +1,82 @@
 // sketch.js
-// MAIN FILE, shared by the whole group: owns the canvas and calls each mechanic.
-//   time-based-sky.js  (Fei Jiang)    sky, sun, leaves, snow  -> drawSky()
-//   perlin-clouds.js   (Lizuo Wang)   noise clouds            -> called from drawSky()
-//   perlin-snow.js     (Lizuo Wang)   noise snow              -> called from drawSky() in winter
-//   perlin-grass.js    (Lizuo Wang)   meadow and flowers      -> setupMeadow(), drawMeadow()
-//   user input-umberalla.js (Jiahui Zou) umbrella (click, mouse) -> setupUmbrella(), drawUmbrella()
-//   woman-figure.js    (SHARED code)  the woman's body        -> drawWoman(), drawWomanHand()
+// MAIN FILE: owns the canvas and calls each mechanic, in the same three-part
+// structure as the group assignment (Woman with a Parasol, interactive).
+// Two of the three mechanics are taken over from the assignment:
 //
-// The umbrella (user input) is linked to the meadow: it pushes the grass and opens the flowers.
+//   1. PERLIN NOISE AND RANDOMNESS  perlin-grass.js   the meadow and the flowers
+//   2. USER INPUT                    user-input-umbrella.js  Jiahui Zou's umbrella
+//                                    (the mouse swings it, a click opens / closes it).
+//                                    A copy with a shorter shaft, drawn in two parts.
+//   3. TIME-BASED                    time-based-sky.js  Fei Jiang's four-season sky
+//                                    (sky, sun, clouds, falling leaves, snow)
+//   (woman-figure.js only draws the woman. There is no little boy.)
 //
-// Drawing order (back to front): sky + clouds, woman, umbrella, her hand, meadow.
-// The meadow is last so the grass grows in front of her dress.
+// The mechanics are linked:
+//   umbrella moves        -> the grass leans the same way
+//   umbrella is open      -> flowers appear in the meadow (closed: they go away)
 //
-// There must be only ONE setup(), draw() and keyPressed() in the
-// whole project, and they live in this file.
-//
+// This is a Ghibli-style version of the picture, based on a reference image.
 // AI note: written with the help of Claude (Anthropic).
 // "(Week N)" = the Canvas module where the course teaches that technique.
 
+// The woman and the meadow are drawn in "picture units": a 1041 x 1511 picture,
+// the size of the reference image. scale(k) in draw() turns picture units into
+// canvas pixels. The sky (Fei's file) and the umbrella (Jiahui's file) are drawn
+// in canvas pixels, so they are drawn outside of that scale().
+const REF_W = 1041;                               // (const: Week 2)
+const REF_H = 1511;
+let k = 1;                                        // pixels per picture unit
+
+// The umbrella file asks for this: its size on the canvas. The open umbrella is
+// about 485 picture units wide (the reference picture has about 430; any bigger and the top is cut off by the canvas edge).
+function umbrellaScale() {
+  return k * 1.1;
+}
+
 function setup() {
-  createCanvas(600, 700);                         // the group's fixed canvas size: 600 x 700 pixels (createCanvas: Week 6)
-  angleMode(DEGREES);                             // Fei's clouds and sun and Jiahui's umbrella measure angles in degrees (Week 8)
-  setupClouds();                                  // perlin-clouds.js
-  setupSnow();                                    // perlin-snow.js
+  createCanvas(600, 871);                         // 600 / 1041 * 1511 = 871 (createCanvas: Week 6)
+  k = width / REF_W;
+  angleMode(DEGREES);                             // the sky and the umbrella files measure angles in degrees (Week 8)
   setupMeadow();                                  // perlin-grass.js
-  setupUmbrella();                                // user input-umberalla.js
+  setupUmbrella();                                // user-input-umbrella.js
 }
 
 function draw() {
-  drawSky();                                      // time-based-sky.js (it also draws the noise clouds)
-  drawWoman();                                    // woman-figure.js (shared)
-  drawUmbrella();                                 // user input-umberalla.js, held by the woman
-  drawWomanHand();                                // woman-figure.js, her hand in front of the handle
+  drawSky();                                      // time-based-sky.js (Fei): sky, sun, clouds, leaves, snow
+
+  umbrella.move();                                // user-input-umbrella.js (Jiahui): follow the mouse, open / close
+
+  // The canopy layer depends on the umbrella: OPEN, the canopy is behind the woman;
+  // CLOSED, it is in front of her. openAmount goes from 1 (open) to 0 (closed),
+  // so the canopy changes layer when it is half way.
+  let canopyIsBehind = umbrella.openAmount >= 0.5;
+  if (canopyIsBehind) {
+    umbrella.display('canopy');
+  }
+
+  push();
+  scale(k);                                       // scale(): Week 8
+  drawWoman();                                    // woman-figure.js
+  pop();
+
+  if (!canopyIsBehind) {
+    umbrella.display('canopy');
+  }
+  umbrella.display('pole');                       // the shaft is always IN FRONT of the woman
+
+  push();
+  scale(k);
+  drawWomanHand();                                // woman-figure.js, her hand in front of the shaft
   updateGrassFromUmbrella(umbrella.angle);        // the grass leans the way the umbrella moves
   updateFlowers(umbrella.isOpen);                 // flowers come out while the umbrella is open
   drawMeadow();                                   // perlin-grass.js, in front of everything
+  pop();
 }
 
-// The canvas is always 600 x 700. When the browser window is smaller, index.html
-// shrinks the picture to fit (CSS), so nothing needs to be done here, and p5.js
-// still gives mouseX and mouseY in canvas pixels.
-
-// TEMPORARY TEST KEYS (keyPressed and key: Week 6).
-// Remove or hand over to the user-input mechanic later.
-//   R = scatter the flowers, the clouds and the snow again
+// TEST KEY (keyPressed and key: Week 6)
+//   R = make a new random meadow
 function keyPressed() {
   if (key === 'r' || key === 'R') {
-    scatterFlowers();
-    scatterClouds();
-    scatterSnow();
+    setupMeadow();
   }
 }

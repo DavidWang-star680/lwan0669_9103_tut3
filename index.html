@@ -3,19 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Woman with a Parasol - interactive</title>
+    <title>Woman with a Parasol - Ghibli style</title>
     <style>
-      html, body { margin: 0; padding: 0; overflow: hidden; background: #e6e5e0; }
-      canvas { display: block; }
+      html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #e6e5e0; }
+      /* The sketch always draws on a 600 x 871 canvas (the shape of the reference picture).
+         The page centres it and shrinks it (keeping its shape) when the browser window is smaller. */
+      body { display: flex; align-items: center; justify-content: center; }
+      canvas { display: block; width: auto !important; height: min(100vh, calc(100vw * 1511 / 1041), 871px) !important; }
     </style>
     <script src="libraries/p5.min.js"></script>
     <!-- mechanic files first, then sketch.js which combines them -->
     <script src="time-based-sky.js"></script>
-    <script src="perlin-clouds.js"></script>
-    <script src="perlin-snow.js"></script>
     <script src="perlin-grass.js"></script>
     <script src="woman-figure.js"></script>
-    <script src="user%20input-umberalla.js"></script>
+    <script src="user-input-umbrella.js"></script>
     <script src="sketch.js"></script>
   </head>
   <body></body>
