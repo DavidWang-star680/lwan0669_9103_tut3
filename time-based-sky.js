@@ -28,14 +28,16 @@
 let cloudMove = 0;
 
 // Called every frame from sketch.js. Draws the sky, the sun, the clouds and
-// the falling leaves / snow for the current moment of the 1500-frame season cycle.
-// ChatGPT-assisted timing: frameCount tracks elapsed animation frames.
-// The remainder operator (%) restarts the 1500-frame cycle (about 25 seconds
-// at 60 frames per second); if/else checks select the current season.
+// the falling leaves / snow for the current moment of the season cycle.
+// ChatGPT-assisted timing: millis() tracks elapsed time, so the speed does not
+// depend on the frame rate. The remainder operator (%) restarts the cycle.
+// The cycle is 1500 "season frames" long and lasts about 50 seconds
+// (millis() * 0.03; it was 25 seconds with * 0.06, so each season is twice as long).
+// The order of the seasons is: SPRING -> SUMMER -> AUTUMN -> WINTER -> back to spring.
 // cloudMove controls the horizontal movement of this mechanic's own clouds.
 function drawSky() {
   cloudMove = sin(frameCount * 0.4) * 20;
- let seasonFrame = (millis() * 0.06) % 1500;
+  let seasonFrame = (millis() * 0.03) % 1500;
 
   // Draw a seasonal sky first, then this mechanic's original clouds.
   // Autumn leaves and winter snow are drawn only in their relevant seasons.
@@ -827,6 +829,27 @@ function drawAutumnLeaves(alphaValue) {
     frameCount * 0.8,
     color(235, 155, 55, alphaValue)
   );
+
+  // Denser leaves: 40 more leaves drawn with a for loop (for loop: Week 4).
+  // Each leaf's column, speed, start height, sway, size and colour come from the
+  // loop number i with simple arithmetic, so they are spread out but the same every frame.
+  let leafColours = [
+    [190, 75, 35], [220, 120, 35], [165, 65, 35],
+    [235, 145, 45], [200, 90, 30], [235, 175, 60]
+  ];
+  for (let i = 0; i < 40; i++) {
+    let c = leafColours[i % 6];
+    let leafX = (i * 53 + 30) % 600 + sin(frameCount * (0.7 + (i % 5) * 0.1) + i * 47) * (18 + (i % 4) * 4);
+    let leafY = (frameCount * (0.35 + (i % 6) * 0.05) + i * 97) % 760 - 30;
+
+    drawLeaf(
+      leafX,
+      leafY,
+      11 + (i % 4) * 1.5,
+      frameCount * (0.7 + (i % 5) * 0.12) + i * 30,
+      color(c[0], c[1], c[2], alphaValue)
+    );
+  }
 }
 
 
@@ -1064,6 +1087,22 @@ function drawSnow(alphaValue) {
     (frameCount * 0.40 + 350) % 720,
     3
   );
+
+  // Denser snow: 60 more flakes drawn with a for loop (for loop: Week 4).
+  // Each flake's column, speed, starting height and size come from the loop
+  // number i with simple arithmetic, so they are spread out but the same every frame.
+  for (let i = 0; i < 60; i++) {
+    let flakeX = (i * 97 + 20) % 600;                 // spread across the width
+    let flakeSpeed = 0.35 + (i % 7) * 0.05;           // 0.35 to 0.65 pixels per frame
+    let flakeStart = (i * 211 + 37) % 720;                 // different starting heights
+    let flakeSize = 3 + (i % 4);                      // size 3 to 6
+
+    drawSnowflake(
+      flakeX,
+      (frameCount * flakeSpeed + flakeStart) % 720,
+      flakeSize
+    );
+  }
 }
 
 

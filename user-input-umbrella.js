@@ -12,6 +12,15 @@
 //   - mousePressed() now takes that scale into account.
 //   - The sway is wider: -60 to +60 degrees (120 degrees in all) instead of -8 to +8, and it follows the mouse faster (Lizuo, iteration 4).
 //
+// CHANGED FOR THE GHIBLI TEST VERSION (copy of Jiahui's file, the assignment file is not changed):
+//   - the shaft is shorter (the hub, where the shaft ends under the open canopy, is 365 units above the hand)
+//   - the canopy is bigger (umbrellaCanopySize below) without changing the shaft:
+//       open   = about one fifth of the canvas height from tip to bottom of the rim
+//       closed = the folded canopy is about 70% of the shaft length (at least two thirds)
+//   - display(part) can draw only the canopy ('canopy') or only the shaft and handle ('pole'),
+//     so sketch.js can draw the canopy BEHIND the woman and the shaft IN FRONT of her.
+//     display() without a part draws everything, like before.
+//
 // AI note: written with the help of Claude (Anthropic).
 // "(Week N)" = the Canvas module where the course teaches that technique.
 //
@@ -33,6 +42,10 @@
 
 // This variable will hold our single Umbrella object (an instance of the
 // Umbrella class defined further down in this file).
+// How much bigger the canopy is than in the assignment (1 = same size). Only the
+// canopy changes; the shaft keeps its length (hand to hub = 365 units when open).
+const umbrellaCanopySize = 1.17;
+
 let umbrella;
 
 // setupUmbrella() — called once from setup() in sketch.js.
@@ -89,18 +102,21 @@ function mousePressed() {
 // value at 0, the open value at 1, and a smooth mix in between.
 function getShape(openAmount) {
   // Half the width of the umbrella's edge (the rim).
-  let rimHalfWidth = lerp(24, 220, openAmount);
+  let rimHalfWidth = lerp(26, 220 * umbrellaCanopySize, openAmount);
 
   // Half the height of the rim. The rim is a flattened ellipse, because
   // we look up at the umbrella from below (perspective).
-  let rimHalfHeight = lerp(5, 110, openAmount);
+  let rimHalfHeight = lerp(5, 110 * umbrellaCanopySize, openAmount);
 
   // Distance from the hand up to the centre of the rim.
-  let rimY = lerp(-250, -385, openAmount);
+  // Open: the hub (below) must stay 365 units above the hand, so the shaft keeps its
+  // length; the rim is 80 * size units below the hub. Closed: the folded fabric
+  // ends 155 units above the hand, so it covers about 70% of the shaft.
+  let rimY = lerp(-155, -365 + 80 * umbrellaCanopySize, openAmount);
 
   // The "hub": where the ribs meet underneath the fabric, high up near
   // the tip when the umbrella is open.
-  let hubY = rimY - 80 * openAmount;
+  let hubY = rimY - 80 * umbrellaCanopySize * openAmount;
 
   return {
     rimHalfWidth: rimHalfWidth,
@@ -137,7 +153,7 @@ class Umbrella {
 
     // Distance from the hand up to the tip, in umbrella units. Negative
     // because it is ABOVE the hand (in p5.js, y increases downwards).
-    this.tipY = -510;
+    this.tipY = -417;                    // the top of the dome (was -510 in the assignment)
 
     // Colours as [r, g, b] arrays, passed straight into fill() or stroke()
     // like fill(this.srcImgSegColour) in the Week 7 Tutorial.
@@ -183,7 +199,10 @@ class Umbrella {
   }
 
   // display() — draw the whole umbrella. Called once per frame.
-  display() {
+  // part: 'all' (default), 'canopy' (dome, panels and tip) or 'pole' (shaft and handle).
+  display(part = 'all') {
+    let showCanopy = part === 'all' || part === 'canopy';
+    let showPole = part === 'all' || part === 'pole';
     let s = getShape(this.openAmount);
 
     // Save the drawing settings, then transform in the Week 11 order:
@@ -197,6 +216,7 @@ class Umbrella {
     scale(umbrellaScale());
     noStroke();
 
+    if (showCanopy) {
     // 1) Cream dome: the top half of an ellipse.
     // arc(centreX, centreY, width, height, startAngle, stopAngle)
     // Angles are measured clockwise from 3 o'clock, so 180 -> 360 sweeps
@@ -286,6 +306,9 @@ class Umbrella {
       noStroke();
     }
 
+    }
+
+    if (showPole) {
     // 3) Shaft: starts at the bottom of the folded fabric when closed and
     // at the hub when open; lerp blends between the two.
     let startY = lerp(s.rimY + s.rimHalfHeight, s.hubY, this.openAmount);
@@ -299,9 +322,14 @@ class Umbrella {
     fill(this.darkBrown);
     rect(-5, -10, 10, 40);
 
+    }
+
+    if (showCanopy) {
     // 5) Tip: a narrow cream triangle pointing up from the top of the dome.
+    noStroke();
     fill(this.cream);
     triangle(-8, this.tipY + 6, 0, this.tipY - 18, 8, this.tipY + 6);
+    }
 
     // Restore the settings, removing our translate, rotate and scale.
     pop();
