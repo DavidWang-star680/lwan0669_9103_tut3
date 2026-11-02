@@ -16,9 +16,19 @@
 //   - No transparency: the 4-value fill(r, g, b, alpha) was replaced. The
 //     panels now change colour from cream to green with lerp() as the
 //     umbrella opens, using only techniques shown in class.
+//   - Canopy size from the joined version (user input-umberalla.js): a
+//     narrower, taller canopy (rim half-width 290 -> 220, rim half-height
+//     105 -> 110, rim higher up the shaft, ribs meeting near the tip, tip
+//     at -510). Everything else is unchanged.
+//   - Canvas size from the joined version: the canvas now fills the whole
+//     browser window (windowWidth x windowHeight) instead of 800 x 600, like
+//     the main sketch. The umbrella stands where the woman's hand is in the
+//     reference picture (566, 588 in picture units, 1041 x 1511) and is
+//     scaled with scale() so it grows and shrinks with the window.
 //
 // Techniques used:
 //   setup(), draw(), createCanvas(), background()            (Week 6)
+//   windowWidth, windowHeight, windowResized(), resizeCanvas() (Week 8)
 //   fill(), stroke(), strokeWeight(), noStroke()             (Week 6)
 //   rect(), line(), triangle()                               (Week 6)
 //   mouseX, mouseY, mousePressed(), constrain()              (Week 6)
@@ -30,25 +40,45 @@
 //   % remainder, array.push()                                (Week 8)
 //   push() / pop() for drawing                               (Week 8)
 //   translate(), rotate(), angleMode(DEGREES), sin(), cos()  (Week 8)
+//   scale(), min()                                           (Week 11)
 //   map()                                                    (Week 10)
 //   lerp() easing and colour mixing, arc(), max()            (Week 11)
+
+// The reference picture is 1041 x 1511 "picture units". The umbrella's
+// position and size are in these units.
+const designWidth = 1041;
+const designHeight = 1511;
 
 // This variable will hold our single Umbrella object.
 let umbrella;
 
+// pictureScale() — how many canvas pixels one picture unit is: the picture
+// is made as big as possible while still fitting inside the window.
+// min() picks the smaller of the two scales, so nothing is cut off.
+function pictureScale() {
+  return min(width / designWidth, height / designHeight);
+}
+
 // setup() runs ONCE when the sketch starts.
 function setup() {
-  createCanvas(800, 600);
+  // Fill the whole browser window (windowWidth / windowHeight: Week 8).
+  createCanvas(windowWidth, windowHeight);
 
   // Measure every angle in degrees (0–360) instead of radians, the same
   // as the Week 8 and Week 11 Tutorials. This affects rotate(), sin(),
   // cos() and arc().
   angleMode(DEGREES);
 
-  // The (x, y) we pass in is the bottom of the handle, in the horizontal
-  // centre of the canvas, 40 pixels above the bottom edge. This point is
-  // also the pivot that the umbrella rotates around.
-  umbrella = new Umbrella(width / 2, height - 40);
+  // The (x, y) we pass in is where the woman's hand holds the umbrella in
+  // the picture, in picture units. This point is also the pivot that the
+  // umbrella rotates around.
+  umbrella = new Umbrella(566, 588);
+}
+
+// When the browser window changes size (windowResized and resizeCanvas:
+// Week 8). The umbrella is drawn in picture units, so it rescales by itself.
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
 }
 
 // draw() runs repeatedly, once per frame (about 60 times per second).
@@ -66,6 +96,9 @@ function draw() {
 // mousePressed() is called automatically by p5.js on every click.
 // Here we check whether the click landed on the umbrella.
 function mousePressed() {
+  // Everything is in picture units, so multiply by k to get canvas pixels.
+  let k = pictureScale();
+
   // Work out the umbrella's current size.
   let s = getShape(umbrella.openAmount);
 
@@ -74,12 +107,12 @@ function mousePressed() {
   // handle, so we add umbrella.y to turn them into canvas positions.
   // (The umbrella only tilts by about 8 degrees, so we can ignore the
   // tilt here — the click area below is large enough to cover it.)
-  let centreX = umbrella.x;
-  let centreY = umbrella.y + (s.rimY + umbrella.tipY) / 2;
+  let centreX = umbrella.x * k;
+  let centreY = (umbrella.y + (s.rimY + umbrella.tipY) / 2) * k;
 
   // How close the click needs to be: the current canopy width, but never
-  // less than 90 pixels, so the thin CLOSED umbrella is still easy to hit.
-  let hitRadius = max(s.rimHalfWidth, 90);
+  // less than 90 units, so the thin CLOSED umbrella is still easy to hit.
+  let hitRadius = max(s.rimHalfWidth, 90) * k;
 
   // dist() gives the distance between the mouse and the canopy middle.
   let d = dist(mouseX, mouseY, centreX, centreY);
@@ -95,18 +128,19 @@ function mousePressed() {
 // value at 0, the open value at 1, and a smooth mix in between.
 function getShape(openAmount) {
   // Half the width of the umbrella's bottom edge (the rim).
-  let rimHalfWidth = lerp(24, 290, openAmount);
+  let rimHalfWidth = lerp(24, 220, openAmount);
 
   // Half the height of the rim. The rim is a flattened ellipse, because
-  // we look at the umbrella slightly from below (perspective).
-  let rimHalfHeight = lerp(5, 105, openAmount);
+  // we look up at the umbrella from below (perspective).
+  let rimHalfHeight = lerp(5, 110, openAmount);
 
   // Height of the centre of the rim. It rises as the umbrella opens.
-  let rimY = lerp(-170, -300, openAmount);
+  let rimY = lerp(-250, -385, openAmount);
 
   // The "hub": where the ribs meet underneath the fabric. When open it
-  // sits 55 pixels above the rim centre; when closed it is the same.
-  let hubY = rimY - 55 * openAmount;
+  // sits 80 pixels above the rim centre, high up near the tip; when
+  // closed it is the same as the rim centre.
+  let hubY = rimY - 80 * openAmount;
 
   return {
     rimHalfWidth: rimHalfWidth,
@@ -121,7 +155,8 @@ function getShape(openAmount) {
 class Umbrella {
   // constructor() runs once when we call "new Umbrella(x, y)".
   constructor(x, y) {
-    // Bottom of the handle on the canvas, and the pivot for swaying.
+    // The hand that holds the umbrella (in picture units), and the pivot
+    // for swaying.
     this.x = x;
     this.y = y;
 
@@ -140,7 +175,7 @@ class Umbrella {
 
     // Height of the top tip, relative to the handle. Negative because it
     // is ABOVE the handle (in p5.js, y increases downwards).
-    this.tipY = -500;
+    this.tipY = -510;
 
     // Colours as [r, g, b] arrays, passed straight into fill() or stroke()
     // like fill(this.srcImgSegColour) in the Week 7 Tutorial.
@@ -181,13 +216,19 @@ class Umbrella {
   display() {
     let s = getShape(this.openAmount);
 
-    // Save the drawing settings, move the origin (0, 0) to the bottom of
-    // the handle, then rotate around it. Because the origin is the
-    // handle, the umbrella swings around the hand that holds it.
-    // Order matters: translate first, then rotate (Week 11).
+    // How many canvas pixels one picture unit is.
+    let k = pictureScale();
+
+    // Save the drawing settings, then transform in the Week 11 order:
+    // translate -> rotate -> scale.
+    // 1. translate: move the origin (0, 0) to the hand.
+    // 2. rotate: tilt the umbrella around the hand.
+    // 3. scale: from now on 1 unit = 1 picture unit, so the umbrella grows
+    //    and shrinks with the canvas.
     push();
-    translate(this.x, this.y);
+    translate(this.x * k, this.y * k);
     rotate(this.angle);
+    scale(k);
     noStroke();
 
     // 1) Cream dome: the top half of an ellipse.
@@ -293,7 +334,7 @@ class Umbrella {
     fill(this.cream);
     triangle(-10, this.tipY + 6, 0, this.tipY - 22, 10, this.tipY + 6);
 
-    // Restore the settings, removing our translate and rotate.
+    // Restore the settings, removing our translate, rotate and scale.
     pop();
   }
 }
