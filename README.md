@@ -130,7 +130,9 @@ Every technique below was taught in the course; the Canvas module is in brackets
 
 - **Balancing visual detail and interaction:** I wanted the umbrella to remain recognisable as part of Monet's painting while responding clearly to user input. The eight-panel structure, scalloped rim, alternating green shades and cream shadows create visual depth without relying on external images. At the same time, I kept the interaction simple: users click to open or close the umbrella and move the mouse to control its sway. This balance allows the mechanic to remain visually detailed while keeping the user interaction intuitive and easy to understand.
 
-- **AI acknowledgement:** Claude (Anthropic) assisted with code development, mathematical calculations, debugging and checking techniques against the IDEA9103 course materials. I reviewed and tested the generated code, checked the formulas and functions, and made my own modifications to the umbrella's colours, proportions, interaction behaviour and integration with the group artwork. Claude also assisted with checking revised versions, while I continued testing and refining the implementation. AI-assisted sections are acknowledged in the source code.
+
+
+
 
 ## Techniques (Time-based – Fei Jiang)
 
@@ -171,7 +173,7 @@ These techniques allow the sky and seasonal elements to change automatically ove
   
 - **Fei Jiang:** I used ChatGPT (OpenAI) to assist with developing and refining my time-based seasonal sky mechanic. ChatGPT helped with the seasonal timing, smooth colour transitions, cloud drawing, moving sun, falling leaves and snowfall animations. It also helped me understand the functions and add explanatory comments to the code. I reviewed and adjusted the code through several iterations. The AI-assisted sections are explained in the comments of my original `time-based-sky.js`.
   
-- - **Jiahui Zou:** I used Claude (Anthropic) to help write `user input-umberalla.js`: the `Umbrella` class, the drawing of the parasol (cream dome and its shadow, green panels and their colour layers, shaft and tip), the click check, and the eased opening and swaying. Claude also checked the code against the Canvas course pages and replaced anything not taught in class (for example, angles in degrees with `angleMode(DEGREES)` and colour arrays passed to `fill()`), matched the parasol's size, angle and colours to the reference image, and added comments with `(Week N)` tags. I tested each version myself and decided what to change next (for example, a thinner handle, keeping the dome's shadow and removing the background clouds). AI-assisted code is marked in the comment at the top of the file.
+- - **Jiahui Zou:** I used Claude (Anthropic) to assist with specific parts of `user input-umberalla.js`, including calculating the canopy's rib positions (`getRimPoints()`), shaping the scalloped edges (`getScallop()`), blending the green colour layers (`fillGreen()`), and calculating the clickable area when the umbrella tilts using `sin()`, `cos()` and `dist()`. Claude also helped debug the code and check the techniques against the IDEA9103 course materials. I reviewed and tested each version, adjusted the umbrella's proportions, colours and movement, and refined the interaction based on the results. AI-assisted sections are identified in the source code.
 
 ## Iterations (Lizuo Wang)
 
@@ -181,15 +183,15 @@ These techniques allow the sky and seasonal elements to change automatically ove
 4. **Iteration 4** – the clouds move slower; the grass leans the way the umbrella moves, slowly, like a breeze (and keeps swaying with noise when it is still); no flowers at the start, they bloom in eight colours after the umbrella is opened.
    Later changes in iteration 4: cloud layers that fade in and out with each season, storm clouds in summer, faster summer clouds, a soft horizon, a sun that crosses the sky in every season.
 
- 
- ### Iterations (Jiahui Zou – user input)
 
-- **Iteration 1 – the parasol on its own:** a separate sketch (`setup()` / `draw()`, 800 × 600 canvas). Clicking opens or closes the parasol and moving the mouse tilts it -8°…+8°, both eased with `lerp()` (Week 11). The canopy was a cream dome with green panels.
-- **Iteration 1 (refined) – course techniques only:** every function was checked against the Canvas course pages. Things not taught were replaced: `PIE` / `HALF_PI` / `PI` were replaced by angles in degrees with `angleMode(DEGREES)`, the rounded-corner `rect()` by a plain `rect()`, and helper methods called with `this.` by normal functions with parameters. All comments were rewritten in English with `(Week N)` tags.
-- **Iteration 1 (refined) – simpler code:** the code was shortened (some decorative details removed), then the dome's shadow was brought back, the handle was made thinner and the background clouds were removed so the parasol is the focus.
-- **Iteration 2 – matching the painting:** the parasol's size, position, tilt and colours were measured from a reference image of Monet's scene, and the panels got several colour layers again (light and dark halves, alternating panels, a pale green edge, lighting with `cos()`).
-- **Iteration 3 – joined to the main sketch:** `setup()` / `draw()` became `setupUmbrella()` / `drawUmbrella()`; `createCanvas()`, `background()` and `angleMode()` moved to `sketch.js`. The parasol now follows the woman's hand (`getWomanHand()` in `woman-figure.js`) and is scaled with `umbrellaScale()`, and `mousePressed()` takes that scale into account.
-- **Iteration 4 – wider, faster sway (with Lizuo Wang):** the tilt went from -8°…+8° to -60°…+60° and follows the mouse faster (easing 0.06 → 0.15). The click check now uses `sin()` / `cos()` (Week 11) to find the canopy when it leans. The file's comments were rewritten in the same layout as `perlin-grass.js`.
+
+### Iterations (Jiahui Zou – user input)
+
+- **Iteration 1 – the parasol on its own:** a separate sketch (`setup()` / `draw()`, 800 × 600 canvas). Clicking opens or closes the parasol and moving the mouse tilts it -8°…+8°, both eased with `lerp()` (Week 11). Every function was checked against the Canvas course pages and things not taught were replaced (angles in degrees with `angleMode(DEGREES)` instead of `PI` / `HALF_PI` / `PIE`, a plain `rect()`, and normal functions with parameters instead of methods called with `this.`). The canopy is a cream dome with a shadow, a cream border and green panels with simple lighting from `cos()`. All comments are in English with `(Week N)` tags.
+- **Iteration 2 – thinner handle, colour layers, no transparency:** the handle was made thinner (18 → 12 pixels wide), and the canopy got a light green edge, lit and alternating panels, a fold down each panel and a scalloped rim. The 4-value `fill(r, g, b, alpha)` was not shown in class, so the panels now change from cream to green with `lerp()` (Week 11) as the parasol opens, instead of fading in with transparency.
+- **Iteration 3 – matching the painting:** the canopy was resized from a reference image of Monet's scene (rim half-width 290 → 220, a taller canopy with the ribs meeting near the tip, tip at -510). The canvas now fills the browser window (`windowWidth` × `windowHeight`), and the parasol stands where the woman's hand is in the picture (566, 588 in picture units of 1041 × 1511), scaled with `scale()` and `min()` so it resizes with the window.
+- **Iteration 4 – joined to the main sketch (with Lizuo Wang):** `setup()` / `draw()` became `setupUmbrella()` / `drawUmbrella()`; `createCanvas()`, `background()` and `angleMode()` moved to `sketch.js`. The parasol follows the woman's hand (`getWomanHand()` in `woman-figure.js`) and is scaled with `umbrellaScale()`. The sway is wider and faster (-60°…+60°, easing 0.06 → 0.15), and `mousePressed()` uses `sin()` / `cos()` (Week 11) to find the canopy when it leans. The colour change uses `lerp()` inside a normal 3-value `fill()` / `stroke()` (Week 6), so no transparency is used.
+- **Iteration 5 – tidied comments and simpler code:** the file's comments were rewritten in the same layout as `perlin-grass.js` (a header with the AI note, the changes for joining and how the file fits with `sketch.js`, then numbered sections), and every technique is tagged with its `(Week N)`. The ternary `? :` was replaced with a plain `if` (Week 4). The code works and looks exactly the same as before.
  
 
 ## External references
