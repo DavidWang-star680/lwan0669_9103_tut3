@@ -78,10 +78,27 @@ Every technique below was taught in the course; the Canvas module is in brackets
 - **Slower clouds (iteration 4):** the noise step and the drift speed of the clouds were reduced, so they move about as calmly as the grass.
 - **`windowResized()` and `resizeCanvas()`** (Week 8) – positions are stored as fractions of the canvas, so the meadow rescales with the browser window.
 
-## Techniques (Jiahui Zou - user input) and shared code
 
-- **User input (`user input-umberalla.js`, Jiahui Zou):** clicking the umbrella opens or closes it (`mousePressed()`, `dist()`), and moving the mouse left or right tilts it (`mouseX`, `map()`, `constrain()`). Both changes are eased with `lerp()` (Week 11), so nothing jumps. Jiahui should check and extend this section with his own wording.
-- **Woman's body (`woman-figure.js`, shared code):** drawn in a soft Ghibli-like style from a reference picture: straw hat with a blue ribbon, short hair, a face with eyes, a smile and blush, a white dress with a high collar, puffy sleeves, a blue sash and a long skirt blowing to the right. Smooth outlines are made by a small helper `curveVerts()` that places `vertex()` points along a curve with `lerp()` (Week 11) inside a `for` loop (Week 4); the rest uses `beginShape()`/`vertex()` (Week 10), `ellipse()`, `arc()`, `rect()`, `line()`, `triangle()`, `rotate()` and `push()`/`translate()`/`scale()`/`pop()` (Weeks 6, 8, 11), so she scales with the window. `getWomanHand()` returns an `{ x, y }` object (Week 4) that tells the umbrella where to be held.
+
+## Techniques (Jiahui Zou – user input) and shared code
+
+- **User input (`user input-umberalla.js`, Jiahui Zou):** clicking the umbrella opens or closes it (`mousePressed()`, `dist()`), and moving the mouse left or right tilts it (`mouseX`, `map()`, `constrain()`). Both changes are eased with `lerp()` (Week 11), so nothing jumps.
+  - **Structure:** an `Umbrella` class (Week 7) with `toggle()`, `move()` and `display()`, the same update / display pattern as the Bauhaus Head in the Week 11 Tutorial. `sketch.js` calls `setupUmbrella()` once and `drawUmbrella()` every frame, because the project can only have one `setup()` and `draw()`.
+  - **Opening and closing:** `isOpen` is the target chosen by the click and `openAmount` (0 = closed, 1 = open) eases towards it by 8 % each frame. `getShape()` uses `lerp()` to blend every size between its closed and open value and returns them as one `{ name: value }` object (Week 4), so the canopy folds and unfolds smoothly. The green inside fades in with the fill's transparency (Week 11), using `map()` and `constrain()`.
+  - **Swaying:** `map(mouseX, 0, width, -60, 60)` (Week 10) turns the mouse position into a tilt of up to 60° each way, and `lerp()` with 0.15 makes the umbrella follow the mouse quickly but softly.
+  - **Held by the woman:** every frame `move()` reads `getWomanHand()` from `woman-figure.js`; `display()` then uses `push()` / `translate()` / `rotate()` / `scale()` / `pop()` (Weeks 8, 11) so the umbrella pivots around her hand and scales with the window (`umbrellaScale()`).
+  - **Clicking a tilted umbrella:** because the canopy can lean 60°, `mousePressed()` finds its centre with polar coordinates, `sin()` and `cos()` (Week 11), multiplies by the same scale, and compares it with the mouse using `dist()` (Week 7).
+  - **Drawing and colour layers:** `arc()` (Week 11) draws the cream dome and a shadow crescent on the left; `triangle()` (Week 6) draws each green panel, split into a light and a dark half like a fold, plus a pale green edge and a scalloped rim. Rib points are stored in an array of `{ x, y }` objects (Weeks 3, 8); `%` (Week 8) joins the last panel to the first and alternates light and dark panels, and `cos()` adds simple lighting from the upper right. Angles are in degrees with `angleMode(DEGREES)` (Weeks 8, 11).
+  - **Woman's body (`woman-figure.js`, shared code):** drawn in a soft Ghibli-like style from a reference picture: straw hat with a blue ribbon, short hair, a face with eyes, a smile and blush, a white dress with a high collar, puffy sleeves, a blue sash and a long skirt blowing to the right. Smooth outlines are made by a small helper `curveVerts()` that places `vertex()` points along a curve with `lerp()` (Week 11) inside a `for` loop (Week 4); the rest uses `beginShape()`/`vertex()` (Week 10), `ellipse()`, `arc()`, `rect()`, `line()`, `triangle()`, `rotate()` and `push()`/`translate()`/`scale()`/`pop()` (Weeks 6, 8, 11), so she scales with the window. `getWomanHand()` returns an `{ x, y }` object (Week 4) that tells the umbrella where to be held.
+
+ ### Key decisions (Jiahui Zou – user input)
+
+- **Only techniques taught in IDEA9103:** every function was checked against the Canvas course pages and tagged `(Week N)` in the code. Anything not taught was replaced, for example angles are in degrees with `angleMode(DEGREES)` (Weeks 8, 11) instead of `PI` / `HALF_PI`, and colours are passed to `fill()` as arrays (Week 7).
+- **Smooth instead of sudden:** opening, closing and swaying all use `lerp()` easing (Week 11), to match the soft, windy feeling of Monet's painting.
+- **Based on the painting:** the parasol's size, tilt and colours were measured from a reference image of the scene, and the canopy is drawn from below with several colour layers (cream dome and shadow, light and dark green panels, a pale edge), like Monet's many tones.
+- **Clear, simple code:** the parasol was simplified to one class with `toggle()`, `move()` and `display()` plus a few helper functions, so every line can be explained. The background clouds were removed so the parasol is the focus, and the handle was made thinner to look closer to the painting.
+- **Wider, faster sway (iteration 4, with Lizuo Wang):** the tilt went from -8°…+8° to -60°…+60° and follows the mouse faster (easing 0.06 → 0.15), so the interaction is easier to notice. Because the parasol can now lean a lot, the click check uses `sin()` / `cos()` to find the tilted canopy.
+- **Joining the main sketch (iteration 3):** `setup()` / `draw()` became `setupUmbrella()` / `drawUmbrella()`, because the project can only have one `setup()` and `draw()`. The parasol follows `getWomanHand()` and is scaled with `umbrellaScale()`, so it always stays in her hand and fits any window size.
   
 ## Techniques (Time-based – Fei Jiang)
 
@@ -121,6 +138,8 @@ These techniques allow the sky and seasonal elements to change automatically ove
 - The team used ChatGPT to generate a concept image shown in the Week 9 presentation. It is not part of this project.
   
 - **Fei Jiang:** I used ChatGPT (OpenAI) to assist with developing and refining my time-based seasonal sky mechanic. ChatGPT helped with the seasonal timing, smooth colour transitions, cloud drawing, moving sun, falling leaves and snowfall animations. It also helped me understand the functions and add explanatory comments to the code. I reviewed and adjusted the code through several iterations. The AI-assisted sections are explained in the comments of my original `time-based-sky.js`.
+  
+- - **Jiahui Zou:** I used Claude (Anthropic) to help write `user input-umberalla.js`: the `Umbrella` class, the drawing of the parasol (cream dome and its shadow, green panels and their colour layers, shaft and tip), the click check, and the eased opening and swaying. Claude also checked the code against the Canvas course pages and replaced anything not taught in class (for example, angles in degrees with `angleMode(DEGREES)` and colour arrays passed to `fill()`), matched the parasol's size, angle and colours to the reference image, and added comments with `(Week N)` tags. I tested each version myself and decided what to change next (for example, a thinner handle, keeping the dome's shadow and removing the background clouds). AI-assisted code is marked in the comment at the top of the file.
 
 ## Iterations (Lizuo Wang)
 
@@ -129,6 +148,17 @@ These techniques allow the sky and seasonal elements to change automatically ove
 3. **Iteration 3** – the meadow shrinks to the bottom third of the canvas (fewer rows, shorter blades; the cloud height bands were moved up to fit); the woman and Jiahui's umbrella are added to the main sketch.
 4. **Iteration 4** – the clouds move slower; the grass leans the way the umbrella moves, slowly, like a breeze (and keeps swaying with noise when it is still); no flowers at the start, they bloom in eight colours after the umbrella is opened.
    Later changes in iteration 4: cloud layers that fade in and out with each season, storm clouds in summer, faster summer clouds, a soft horizon, a sun that crosses the sky in every season.
+
+ 
+ ### Iterations (Jiahui Zou – user input)
+
+- **Iteration 1 – the parasol on its own:** a separate sketch (`setup()` / `draw()`, 800 × 600 canvas). Clicking opens or closes the parasol and moving the mouse tilts it -8°…+8°, both eased with `lerp()` (Week 11). The canopy was a cream dome with green panels.
+- **Iteration 1 (refined) – course techniques only:** every function was checked against the Canvas course pages. Things not taught were replaced: `PIE` / `HALF_PI` / `PI` were replaced by angles in degrees with `angleMode(DEGREES)`, the rounded-corner `rect()` by a plain `rect()`, and helper methods called with `this.` by normal functions with parameters. All comments were rewritten in English with `(Week N)` tags.
+- **Iteration 1 (refined) – simpler code:** the code was shortened (some decorative details removed), then the dome's shadow was brought back, the handle was made thinner and the background clouds were removed so the parasol is the focus.
+- **Iteration 2 – matching the painting:** the parasol's size, position, tilt and colours were measured from a reference image of Monet's scene, and the panels got several colour layers again (light and dark halves, alternating panels, a pale green edge, lighting with `cos()`).
+- **Iteration 3 – joined to the main sketch:** `setup()` / `draw()` became `setupUmbrella()` / `drawUmbrella()`; `createCanvas()`, `background()` and `angleMode()` moved to `sketch.js`. The parasol now follows the woman's hand (`getWomanHand()` in `woman-figure.js`) and is scaled with `umbrellaScale()`, and `mousePressed()` takes that scale into account.
+- **Iteration 4 – wider, faster sway (with Lizuo Wang):** the tilt went from -8°…+8° to -60°…+60° and follows the mouse faster (easing 0.06 → 0.15). The click check now uses `sin()` / `cos()` (Week 11) to find the canopy when it leans. The file's comments were rewritten in the same layout as `perlin-grass.js`.
+ 
 
 ## External references
 
