@@ -1,123 +1,306 @@
-// user input-umberalla.js
-// MECHANIC: User input  (owner: Jiahui Zou)
-// The umbrella opens / closes when clicked and sways towards the mouse.
-// Both changes are eased with lerp(), so nothing jumps between states.
+// =====================================================================
+// IDEA9103 User Input — An umbrella that opens, closes and sways
+// ---------------------------------------------------------------------
+// Interaction:
+//   1. Click on the umbrella  -> it opens. Click again -> it closes.
+//   2. Move the mouse left / right -> the umbrella gently tilts
+//      towards the mouse, as if it is being swayed by the user's hand.
 //
-// JOINED TO THE MAIN SKETCH (iteration 3). Changes made for this:
-//   - setup() is now setupUmbrella() and draw() is now drawUmbrella();
-//     sketch.js calls them (there can be only one setup() and draw()).
-//   - createCanvas(), background() and angleMode() moved to sketch.js.
-//   - The umbrella is held by the woman: every frame it is moved to her hand
-//     (getWomanHand() in woman-figure.js) and scaled with umbrellaScale().
-//   - mousePressed() now takes that scale into account.
-//   - The sway is wider: -60 to +60 degrees (120 degrees in all) instead of -8 to +8, and it follows the mouse faster (Lizuo, iteration 4).
+// Both interactions are animated smoothly (easing with lerp), so the
+// umbrella never "jumps" from one state to another.
+// =====================================================================
 //
-// CHANGED FOR THE GHIBLI TEST VERSION (copy of Jiahui's file, the assignment file is not changed):
-//   - the shaft is shorter (the hub, where the shaft ends under the open canopy, is 365 units above the hand)
-//   - the canopy is bigger (umbrellaCanopySize below) without changing the shaft:
-//       open   = about one fifth of the canvas height from tip to bottom of the rim
-//       closed = the folded canopy is about 70% of the shaft length (at least two thirds)
-//   - display(part) can draw only the canopy ('canopy') or only the shaft and handle ('pole'),
-//     so sketch.js can draw the canopy BEHIND the woman and the shaft IN FRONT of her.
-//     display() without a part draws everything, like before.
+// Everything used in this sketch was covered in the IDEA9103 course
+// material (the week where each item appears is shown in brackets):
 //
-// AI note: written with the help of Claude (Anthropic).
-// "(Week N)" = the Canvas module where the course teaches that technique.
-//
-// Techniques used:
-//   fill(), stroke(), strokeWeight(), noStroke()             (Week 6)
-//   rect(), line(), triangle()                               (Week 6)
-//   mouseX, mouseY, mousePressed(), constrain()              (Week 6)
-//   dist()                                                   (Week 7)
-//   class, constructor, this, methods                        (Week 7)
-//   colour arrays passed to fill() / stroke()                (Week 7)
-//   objects { name: value }, array[0]                        (Week 3)
-//   functions that return an object                          (Week 4)
-//   for loops, if statements, ===                            (Week 4)
-//   % remainder, array.push()                                (Week 8)
-//   push() / pop() for drawing (not array.push!)             (Week 8)
-//   translate(), rotate(), scale(), sin(), cos()             (Week 8)
-//   map()                                                    (Week 10)
-//   lerp() easing, arc(), max(), transparency                (Week 11)
+//   setup()  draw()  createCanvas()  background()      (Week 6)
+//   fill()  stroke()  strokeWeight()  noStroke()       (Week 6)
+//   rect()  line()  triangle()                         (Week 6 Lecture)
+//   mouseX  mouseY  mousePressed()  constrain()        (Week 6)
+//   dist()                                             (Week 7 Tutorial)
+//   class / constructor / this / methods               (Weeks 7 / 8 / 11)
+//   Calling an object's methods: umbrella.move()       (Week 11 Tutorial: head.update(), head.display())
+//   Reading an object's properties from outside it     (Week 7 Tutorial: dist(segment.srcImgSegXPos, ...))
+//   Custom functions with parameters and return        (Weeks 3 / 4 Tutorials, Week 8 Tutorial drawValues())
+//   Objects written as { name: value }                 (Week 3 Lecture: let square = { size: 200, color: red })
+//   Returning an object { ... } from a function        (Week 4 Tutorial: return { firstName: firstName, ... })
+//   Arrays, array[0], array.push(), array.length       (Weeks 3 / 4 / 8)
+//   for loops, if statements, < > <= ===               (Week 4)
+//   % (remainder), ? : (ternary), ! (logical NOT)      (Weeks 5 / 7 / 8)
+//   sin()  cos()                                       (Week 8 / 11 Tutorials)
+//   push() / pop()  — the DRAWING versions             (Week 7 Lecture, Weeks 8 / 11)
+//       NOTE: these are not the same as array.push()!
+//   translate()  rotate()                              (Week 8 Tutorial, Week 11)
+//   lerp(a, b, t)  — easing / smooth transitions       (Week 11 Lecture / Tutorial)
+//   map(v, a1, b1, a2, b2)                             (Weeks 10 / 11)
+//   max()                                              (Week 11 Lecture)
+//   angleMode(DEGREES) — all angles in degrees         (Week 8 Tutorial, Week 11 Lecture / Tutorial)
+//   arc(x, y, w, h, start, stop) in degrees            (Week 11 Lecture: arc(0, 1, 20, 20, 10, 120))
+//   Transparency (the last argument of fill)           (Week 11 Tutorial: fill(20, 20))
+//   Colour arrays passed to fill() / stroke()          (Week 7 Tutorial: fill(this.srcImgSegColour))
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// Global variables
+// ---------------------------------------------------------------------
 
 // This variable will hold our single Umbrella object (an instance of the
 // Umbrella class defined further down in this file).
-// How much bigger the canopy is than in the assignment (1 = same size). Only the
-// canopy changes; the shaft keeps its length (hand to hub = 365 units when open).
-const umbrellaCanopySize = 1.17;
-
 let umbrella;
 
-// setupUmbrella() — called once from setup() in sketch.js.
-// (Was setup() before the umbrella joined the main sketch.)
-function setupUmbrella() {
-  umbrella = new Umbrella();
+
+// ---------------------------------------------------------------------
+// setup() runs ONCE when the sketch starts.
+// ---------------------------------------------------------------------
+function setup() {
+  // Create an 800 x 600 pixel canvas to draw on.
+  createCanvas(800, 600);
+
+  // Measure every angle in degrees (0–360) instead of radians, the same
+  // as the Week 8 and Week 11 Tutorials. This affects rotate(), sin(),
+  // cos() and arc().
+  angleMode(DEGREES);
+
+  // Create the umbrella. The (x, y) we pass in is the bottom of the
+  // handle (where a hand would hold it). We place it in the horizontal
+  // centre of the canvas, 40 pixels above the bottom edge.
+  // This point is also the pivot that the umbrella rotates around.
+  umbrella = new Umbrella(width / 2, height - 40);
 }
 
-// drawUmbrella() — called every frame from draw() in sketch.js.
-// (Was draw() before; background() now happens in sketch.js.)
-function drawUmbrella() {
-  // Update first, then draw (the same pattern as head.update() and
-  // head.display() in the Week 11 Tutorial).
+
+// ---------------------------------------------------------------------
+// draw() runs repeatedly, once per frame (about 60 times per second).
+// ---------------------------------------------------------------------
+function draw() {
+  // Clear the canvas every frame with a sky-blue colour.
+  // Without this, every frame would be drawn on top of the last one
+  // and the moving umbrella would leave a trail.
+  background(110, 172, 232);
+
+  // Separate "updating" from "drawing" (the same pattern as
+  // head.update() and head.display() in the Week 11 Tutorial):
+  // 1) move() updates the umbrella's data (how open it is, its angle).
+  // 2) display() draws the umbrella using that updated data.
   umbrella.move();
   umbrella.display();
 }
 
-// mousePressed() is called automatically by p5.js on every click.
+
+// ---------------------------------------------------------------------
+// mousePressed() is a built-in p5.js event function.
+// p5.js calls it automatically, once, every time the mouse is clicked.
 // Here we check whether the click landed on the umbrella.
+// ---------------------------------------------------------------------
 function mousePressed() {
-  // The umbrella is drawn in "umbrella units" and then scaled, so every
-  // length has to be multiplied by the same scale to get canvas pixels.
-  let k = umbrellaScale();
+  // Work out the umbrella's current size. We read openAmount from the
+  // umbrella object from outside the class, like
+  // segment.srcImgSegXPos in the Week 7 Tutorial.
   let s = getShape(umbrella.openAmount);
 
-  // How far the middle of the canopy is from the hand, along the shaft
-  // (halfway between the rim and the tip), in canvas pixels.
-  // rimY and tipY are negative (above the hand), so we flip the sign.
-  let r = -((s.rimY + umbrella.tipY) / 2) * k;
+  // The middle of the canopy is straight above the handle, halfway
+  // between the rim and the tip. rimY and tipY are measured from the
+  // handle, so we add umbrella.y to turn them into canvas positions.
+  // (The umbrella only tilts by about 8 degrees, so we can ignore the
+  // tilt here — the click area below is large enough to cover it.)
+  let centreX = umbrella.x;
+  let centreY = umbrella.y + (s.rimY + umbrella.tipY) / 2;
 
-  // The umbrella can now lean up to 60 degrees, so the canopy is no longer
-  // straight above the hand. Polar coordinates (Week 11 Tutorial) give
-  // its position on a circle around the hand: the angle is measured from
-  // straight up, so sin() gives the sideways part and cos() the upward part.
-  let centreX = umbrella.x + sin(umbrella.angle) * r;
-  let centreY = umbrella.y - cos(umbrella.angle) * r;
-
-  // How close the click needs to be: the current canopy width, but never
-  // less than 90 units, so the thin CLOSED umbrella is still easy to hit.
-  let hitRadius = max(s.rimHalfWidth, 90) * k;
+  // How close the click needs to be. Use the current canopy width,
+  // but never less than 90 pixels, so the CLOSED umbrella (which is
+  // very thin) is still easy to click.
+  let hitRadius = max(s.rimHalfWidth, 90);
 
   // dist() gives the distance between the mouse and the canopy middle.
   let d = dist(mouseX, mouseY, centreX, centreY);
+
+  // If the mouse is close enough, open or close the umbrella.
   if (d < hitRadius) {
     umbrella.toggle();
   }
 }
 
-// getShape(openAmount) — work out the umbrella's current size, in umbrella
-// units (before scaling), measured from the hand along the shaft.
+
+// =====================================================================
+// Umbrella class
+// ---------------------------------------------------------------------
+// The class keeps the umbrella's data (position, state, colours) and
+// its main behaviour (toggle, move, display) together.
+// The detailed drawing is done by separate custom functions further
+// down (drawOuter, drawInner, drawShaft, drawTip). display() calls them
+// and passes in the values they need as parameters.
+// =====================================================================
+class Umbrella {
+
+  // -------------------------------------------------------------------
+  // constructor() runs once when we call "new Umbrella(x, y)".
+  // It sets up the starting values for this object.
+  // -------------------------------------------------------------------
+  constructor(x, y) {
+    // Position of the bottom of the handle on the canvas.
+    // This is also the pivot point for the swaying rotation.
+    this.x = x;
+    this.y = y;
+
+    // --- Open / closed state ---
+    // isOpen is the TARGET state that the user chooses by clicking.
+    this.isOpen = false;
+    // openAmount is the CURRENT state used for drawing:
+    //   0 = fully closed, 1 = fully open.
+    // It moves gradually towards the target (see move()), which is what
+    // creates the smooth opening / closing animation.
+    this.openAmount = 0;
+
+    // --- Swaying ---
+    // Current tilt of the umbrella, in degrees (0 = perfectly upright).
+    this.angle = 0;
+
+    // --- Shape ---
+    // Number of fabric panels (and ribs) the umbrella has.
+    this.panelCount = 8;
+
+    // Height of the umbrella's top tip, relative to the handle.
+    // Negative because it is ABOVE the handle (in p5.js, y increases
+    // downwards). It never changes.
+    this.tipY = -500;
+
+    // --- Colours ---
+    // Stored as [r, g, b] arrays so all colours are managed in one place
+    // and are easy to change later. A whole colour array can be passed
+    // straight into fill() or stroke(), e.g. fill(this.cream) — the same
+    // approach as fill(this.srcImgSegColour) in the Week 7 Tutorial.
+    this.green = [112, 168, 108];        // base green of the inner fabric
+    this.cream = [242, 234, 214];        // cream outer fabric
+    this.creamShadow = [222, 210, 184];  // darker cream for the shaded side
+    this.brown = [125, 88, 62];          // wooden shaft
+    this.darkBrown = [100, 70, 50];      // darker brown for the handle
+  }
+
+
+  // -------------------------------------------------------------------
+  // toggle() — switch between open and closed.
+  // Called from mousePressed() when the umbrella is clicked.
+  // -------------------------------------------------------------------
+  toggle() {
+    // "!" is the logical NOT operator: true becomes false and
+    // false becomes true.
+    this.isOpen = !this.isOpen;
+  }
+
+
+  // -------------------------------------------------------------------
+  // move() — update the umbrella's data. Called once per frame.
+  // -------------------------------------------------------------------
+  move() {
+    // ===== 1) Opening / closing =====
+
+    // Choose the target value with the ternary operator:
+    //   condition ? valueIfTrue : valueIfFalse
+    // So target is 1 when the umbrella should be open, 0 when closed.
+    let target = this.isOpen ? 1 : 0;
+
+    // Easing (Week 11): each frame, move openAmount 8% of the remaining
+    // distance towards the target. Big steps when far away, tiny steps
+    // when close, so the motion starts fast and slows down smoothly
+    // instead of jumping straight to the end.
+    this.openAmount = lerp(this.openAmount, target, 0.08);
+
+
+    // ===== 2) Swaying with the mouse =====
+
+    // Keep the mouse x inside the canvas, so the umbrella doesn't tilt
+    // too far when the mouse leaves the canvas.
+    let mx = constrain(mouseX, 0, width);
+
+    // Convert the mouse x range (0 to width) into an angle range
+    // (-8 to +8 degrees).
+    // Mouse on the left  -> negative angle -> tilts left.
+    // Mouse on the right -> positive angle -> tilts right.
+    let targetAngle = map(mx, 0, width, -8, 8);
+
+    // Ease the angle towards the target as well (6% per frame), so the
+    // umbrella follows the mouse softly instead of snapping to it.
+    this.angle = lerp(this.angle, targetAngle, 0.06);
+  }
+
+
+  // -------------------------------------------------------------------
+  // display() — draw the whole umbrella. Called once per frame.
+  // -------------------------------------------------------------------
+  display() {
+    // Get the current measurements from the custom function getShape().
+    let s = getShape(this.openAmount);
+
+    // push() saves the current drawing settings (transformations and
+    // styles) so our changes below don't affect anything drawn later.
+    push();
+
+    // Move the origin (0, 0) to the bottom of the handle.
+    // From now on we can draw the umbrella around (0, 0).
+    translate(this.x, this.y);
+
+    // Rotate the whole coordinate system around that new origin.
+    // Because the origin is the handle, the umbrella swings around the
+    // hand that holds it — this is the swaying effect.
+    // Order matters: translate first, then rotate (Week 11).
+    rotate(this.angle);
+
+    // Draw the parts from back to front (later shapes cover earlier
+    // ones, like layers of paper). Each custom function receives the
+    // values it needs as parameters.
+    drawOuter(s, this.tipY, this.cream, this.creamShadow);        // cream outer canopy (back layer)
+    drawInner(s, this.openAmount, this.panelCount, this.green);   // green inner panels (seen from below)
+    drawShaft(s, this.openAmount, this.brown, this.darkBrown);    // brown shaft and handle
+    drawTip(this.tipY, this.cream);                               // small cream tip at the very top
+
+    // pop() restores the settings saved by push(), removing our
+    // translate and rotate so the rest of the sketch is unaffected.
+    pop();
+  }
+}
+
+
+// =====================================================================
+// Custom helper functions
+// ---------------------------------------------------------------------
+// All of the functions below are drawn INSIDE the umbrella's translated
+// and rotated coordinate system, where (0, 0) is the bottom of the
+// handle and everything above it has a negative y value.
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// getShape(openAmount) — work out the umbrella's current size.
 //   openAmount: 0 = closed, 1 = open
-// Returns an object { name: value } (like newPerson() in the Week 4
-// Tutorial). lerp(closedValue, openValue, openAmount) gives the closed
-// value at 0, the open value at 1, and a smooth mix in between.
+// Returns an object { name: value, ... } with all the measurements the
+// drawing functions need (like returning an object in the Week 4
+// Tutorial).
+// ---------------------------------------------------------------------
 function getShape(openAmount) {
-  // Half the width of the umbrella's edge (the rim).
-  let rimHalfWidth = lerp(26, 220 * umbrellaCanopySize, openAmount);
+  // lerp() is used here for interpolation rather than animation:
+  // lerp(closedValue, openValue, openAmount) gives the closed value when
+  // openAmount = 0, the open value when openAmount = 1, and a smooth
+  // mix in between.
 
-  // Half the height of the rim. The rim is a flattened ellipse, because
-  // we look up at the umbrella from below (perspective).
-  let rimHalfHeight = lerp(5, 110 * umbrellaCanopySize, openAmount);
+  // Half the width of the umbrella's bottom edge (the rim).
+  // Narrow when closed (24), wide when open (290).
+  let rimHalfWidth = lerp(24, 290, openAmount);
 
-  // Distance from the hand up to the centre of the rim.
-  // Open: the hub (below) must stay 365 units above the hand, so the shaft keeps its
-  // length; the rim is 80 * size units below the hub. Closed: the folded fabric
-  // ends 155 units above the hand, so it covers about 70% of the shaft.
-  let rimY = lerp(-155, -365 + 80 * umbrellaCanopySize, openAmount);
+  // Half the height of the rim ellipse. The rim is drawn as a flattened
+  // ellipse to suggest we are looking at it slightly from below
+  // (perspective).
+  let rimHalfHeight = lerp(5, 105, openAmount);
 
-  // The "hub": where the ribs meet underneath the fabric, high up near
-  // the tip when the umbrella is open.
-  let hubY = rimY - 80 * umbrellaCanopySize * openAmount;
+  // Height of the centre of the rim. It rises as the umbrella opens.
+  let rimY = lerp(-170, -300, openAmount);
 
+  // The "hub": where the ribs meet underneath the fabric.
+  // When open it sits 55 pixels above the rim centre; when closed
+  // (openAmount = 0) it is the same as the rim centre.
+  let hubY = rimY - 55 * openAmount;
+
+  // Send all four values back together in one object.
   return {
     rimHalfWidth: rimHalfWidth,
     rimHalfHeight: rimHalfHeight,
@@ -126,254 +309,295 @@ function getShape(openAmount) {
   };
 }
 
-// The Umbrella class keeps the umbrella's data (position, state, colours)
-// and its behaviour (toggle, move, display) together.
-class Umbrella {
-  // constructor() runs once when we call "new Umbrella()".
-  constructor() {
-    // Where the hand holds the shaft, in canvas pixels. This is the pivot
-    // the umbrella rotates around. It is updated every frame in move(),
-    // so the umbrella stays in the woman's hand.
-    this.x = 0;
-    this.y = 0;
 
-    // isOpen is the TARGET state that the user chooses by clicking.
-    // openAmount is the CURRENT state used for drawing (0 = closed,
-    // 1 = open). It starts open, like in the painting, and moves
-    // gradually towards the target in move().
-    this.isOpen = true;
-    this.openAmount = 1;
-
-    // Current tilt of the umbrella in degrees (0 = upright). angleMode()
-    // is set in sketch.js.
-    this.angle = 0;
-
-    // Number of fabric panels (and ribs).
-    this.panelCount = 8;
-
-    // Distance from the hand up to the tip, in umbrella units. Negative
-    // because it is ABOVE the hand (in p5.js, y increases downwards).
-    this.tipY = -417;                    // the top of the dome (was -510 in the assignment)
-
-    // Colours as [r, g, b] arrays, passed straight into fill() or stroke()
-    // like fill(this.srcImgSegColour) in the Week 7 Tutorial.
-    this.cream = [242, 236, 216];        // outer fabric and tip
-    this.creamShadow = [222, 212, 186];  // shaded side of the dome
-    this.green = [98, 158, 90];          // base green of the inner panels
-    this.brown = [120, 86, 60];          // shaft
-    this.darkBrown = [95, 68, 48];       // handle
-  }
-
-  // toggle() — switch between open and closed.
-  toggle() {
-    // "!" (logical NOT) turns true into false and false into true.
-    this.isOpen = !this.isOpen;
-  }
-
-  // move() — update the umbrella's data. Called once per frame.
-  move() {
-    // 0) Stay in the woman's hand: getWomanHand() (woman-figure.js)
-    // returns an object with the hand's x and y on the canvas.
-    let hand = getWomanHand();
-    this.x = hand.x;
-    this.y = hand.y;
-
-    // 1) Opening / closing
-    // The ternary operator picks 1 when open, 0 when closed.
-    let target = this.isOpen ? 1 : 0;
-
-    // Easing (Week 11): each frame, move 8% of the remaining distance
-    // towards the target. The motion starts fast and slows down smoothly.
-    this.openAmount = lerp(this.openAmount, target, 0.08);
-
-    // 2) Swaying with the mouse (wider and faster, Lizuo, iteration 4)
-    // Keep the mouse x inside the canvas, then convert it into an angle
-    // between -60 degrees (mouse on the left) and +60 degrees (right),
-    // 120 degrees in all.
-    let mx = constrain(mouseX, 0, width);
-    let targetAngle = map(mx, 0, width, -60, 60);
-
-    // Ease the angle as well. 0.15 per frame (was 0.06) makes the umbrella
-    // follow the mouse faster, but it still moves smoothly.
-    this.angle = lerp(this.angle, targetAngle, 0.15);
-  }
-
-  // display() — draw the whole umbrella. Called once per frame.
-  // part: 'all' (default), 'canopy' (dome, panels and tip) or 'pole' (shaft and handle).
-  display(part = 'all') {
-    let showCanopy = part === 'all' || part === 'canopy';
-    let showPole = part === 'all' || part === 'pole';
-    let s = getShape(this.openAmount);
-
-    // Save the drawing settings, then transform in the Week 11 order:
-    // translate -> rotate -> scale.
-    // 1. translate: move the origin (0, 0) to the woman's hand.
-    // 2. rotate: tilt the umbrella around her hand.
-    // 3. scale: make the umbrella the right size for the woman and canvas.
-    push();
-    translate(this.x, this.y);
-    rotate(this.angle);
-    scale(umbrellaScale());
-    noStroke();
-
-    if (showCanopy) {
-    // 1) Cream dome: the top half of an ellipse.
-    // arc(centreX, centreY, width, height, startAngle, stopAngle)
-    // Angles are measured clockwise from 3 o'clock, so 180 -> 360 sweeps
-    // over the TOP. arc() takes the height of the WHOLE ellipse, and the
-    // rim-to-tip distance is only half of it, so we multiply by 2.
-    let domeW = s.rimHalfWidth * 2;
-    let domeH = (s.rimY - this.tipY) * 2;
-    fill(this.cream);
-    arc(0, s.rimY, domeW, domeH, 180, 360);
-
-    // Shadow on the left side for a 3D look (light comes from the right).
-    // Step A: a darker quarter of the ellipse, from 180 to 270 degrees
-    //         (9 o'clock to 12 o'clock).
-    // Step B: cover most of it with a narrower cream dome (78% of the
-    //         width), so only a thin crescent of shadow is left on the left.
-    fill(this.creamShadow);
-    arc(0, s.rimY, domeW, domeH, 180, 270);
-    fill(this.cream);
-    arc(0, s.rimY, domeW * 0.78, domeH * 0.99, 180, 360);
-
-    // 2) Green inner panels, seen from below, with several colour layers.
-    // The inside is hidden when closed, so the green fades in as the
-    // umbrella opens: openAmount 0.1 -> alpha 0, openAmount 0.6 -> 255.
-    // constrain() keeps alpha between 0 and 255.
-    let alpha = constrain(map(this.openAmount, 0.1, 0.6, 0, 255), 0, 255);
-
-    if (alpha > 0) {
-      // The points where the ribs end on the rim (an array of { x, y }),
-      // and the hub where all the ribs meet.
-      let rim = getRimPoints(s, this.panelCount);
-      let hub = { x: 0, y: s.hubY };
-
-      // Layer A: a light yellow-green edge around the rim.
-      // Every panel is drawn a little bigger first; the real panels are
-      // drawn on top, so only a thin light edge stays visible.
-      fill(150, 192, 106, alpha);
-      for (let i = 0; i < rim.length; i++) {
-        // Index of the next rib. % wraps the last one back to 0, so the
-        // last panel joins the first (Week 8: frameCount % arrayLength).
-        let next = (i + 1) % rim.length;
-        let mid = getScallop(rim[i], rim[next], hub);
-
-        let p1 = enlarge(rim[i], s.rimY);
-        let p2 = enlarge(rim[next], s.rimY);
-        let m = enlarge(mid, s.rimY);
-        triangle(hub.x, hub.y, p1.x, p1.y, m.x, m.y);
-        triangle(hub.x, hub.y, m.x, m.y, p2.x, p2.y);
-      }
-
-      // Layer B: the panels themselves.
-      for (let i = 0; i < rim.length; i++) {
-        let next = (i + 1) % rim.length;
-        let p1 = rim[i];
-        let p2 = rim[next];
-
-        // The middle of the panel's outer edge, pulled in a little towards
-        // the hub, so the edge curves inwards between ribs (scalloped).
-        let mid = getScallop(p1, p2, hub);
-
-        // Simple lighting: the light comes from the upper right.
-        // midAngle points to the middle of this panel (degrees).
-        // cos() is 1 when the panel faces the light and -1 when it faces
-        // away, so light ends up between about 0.72 (dark) and 1.04 (bright).
-        let midAngle = (360 / rim.length) * (i + 0.5);
-        let light = 0.88 + 0.16 * cos(midAngle - 23);
-
-        // Neighbouring panels alternate a little lighter / darker.
-        if (i % 2 === 0) {
-          light = light - 0.06;
-        }
-
-        // Each panel is split into two triangles, one slightly lighter
-        // and one slightly darker, like the fold down the middle of each
-        // piece of fabric.
-        fillGreen(this.green, light + 0.05, alpha);
-        triangle(hub.x, hub.y, p1.x, p1.y, mid.x, mid.y);
-        fillGreen(this.green, light - 0.05, alpha);
-        triangle(hub.x, hub.y, mid.x, mid.y, p2.x, p2.y);
-      }
-
-      // Layer C: the ribs, thin dark-green lines from the hub to the rim.
-      stroke(64, 116, 66, alpha);
-      strokeWeight(2);
-      for (let i = 0; i < rim.length; i++) {
-        line(hub.x, hub.y, rim[i].x, rim[i].y);
-      }
-      noStroke();
-    }
-
-    }
-
-    if (showPole) {
-    // 3) Shaft: starts at the bottom of the folded fabric when closed and
-    // at the hub when open; lerp blends between the two.
-    let startY = lerp(s.rimY + s.rimHalfHeight, s.hubY, this.openAmount);
-    stroke(this.brown);
-    strokeWeight(7);
-    line(0, startY, 0, 0);
-
-    // 4) Handle: a darker rectangle at the bottom of the shaft, mostly
-    // hidden by the woman's hand. rect(x, y, width, height).
-    noStroke();
-    fill(this.darkBrown);
-    rect(-5, -10, 10, 40);
-
-    }
-
-    if (showCanopy) {
-    // 5) Tip: a narrow cream triangle pointing up from the top of the dome.
-    noStroke();
-    fill(this.cream);
-    triangle(-8, this.tipY + 6, 0, this.tipY - 18, 8, this.tipY + 6);
-    }
-
-    // Restore the settings, removing our translate, rotate and scale.
-    pop();
-  }
-}
-
-// getRimPoints(s, panelCount) — where each rib ends on the rim.
-// Returns an array of { x, y } objects, one per rib.
+// ---------------------------------------------------------------------
+// getRimPoints(s, panelCount) — calculate where each rib ends on the rim.
+// Returns an array of { x, y } objects (one per rib).
+// ---------------------------------------------------------------------
 function getRimPoints(s, panelCount) {
+  // Start with an empty array.
   let points = [];
+
   for (let i = 0; i < panelCount; i++) {
-    // Spread the ribs evenly around 360 degrees.
+    // Spread the ribs evenly around a full circle (360 degrees).
+    // With 8 panels the ribs are 45 degrees apart.
     let a = (360 / panelCount) * i;
 
-    // Polar coordinates (Week 11): x = radius * cos, y = radius * sin,
-    // with a smaller radius for y so the circle becomes an ellipse.
-    // points.push() is the ARRAY push (Week 8), not the drawing push().
+    // Polar coordinates -> x and y (Week 11 Tutorial):
+    //   x = radius · cos(angle),  y = radius · sin(angle)
+    // We use a different radius for x and for y, so the circle is
+    // squashed into an ellipse (the perspective view of the rim).
+    // Here push() is the ARRAY method that adds an item to the end of
+    // the array (like randomNumberArray.push() in the Week 8 Tutorial)
+    // — not the drawing push() used in display().
     points.push({ x: cos(a) * s.rimHalfWidth, y: s.rimY + sin(a) * s.rimHalfHeight });
   }
+
+  // Give the finished array back to the caller.
   return points;
 }
 
-// getScallop(p1, p2, hub) — the halfway point between two ribs, moved 10%
-// of the way towards the hub with lerp(), so the fabric edge curves in.
+
+// ---------------------------------------------------------------------
+// getScallop(p1, p2, hub) — the middle of the edge between two ribs,
+// pulled 10% of the way towards the hub. This makes the fabric edge
+// curve inwards between ribs, like a real umbrella.
+// Returns an { x, y } object.
+// ---------------------------------------------------------------------
 function getScallop(p1, p2, hub) {
   return {
+    // (p1.x + p2.x) / 2 is the halfway point between the two ribs;
+    // lerp(..., hub.x, 0.1) then moves it 10% towards the hub.
     x: lerp((p1.x + p2.x) / 2, hub.x, 0.1),
     y: lerp((p1.y + p2.y) / 2, hub.y, 0.1)
   };
 }
 
-// enlarge(p, rimY) — push a rim point a little outwards (3% sideways,
-// 8% up / down), used for the light edge around the rim.
+
+// ---------------------------------------------------------------------
+// enlarge(p, rimY) — push a rim point slightly outwards.
+// Used to make the cream border a little bigger than the green panels.
+// Returns a NEW { x, y } object (the original point is not changed).
+// ---------------------------------------------------------------------
 function enlarge(p, rimY) {
   return {
+    // 3% further out horizontally (x is measured from the centre, 0).
     x: p.x * 1.03,
+    // 8% further from the rim centre vertically.
     y: rimY + (p.y - rimY) * 1.08
   };
 }
 
-// fillGreen(green, light, alpha) — a lighter (light > 1) or darker
-// (light < 1) version of the base green. Each value is taken out of the
-// array with [0], [1], [2] (Week 3) and multiplied, like
-// fill(randomOrNoiseArray[i] * 360, 100, 100) in the Week 8 Tutorial.
+
+// ---------------------------------------------------------------------
+// drawOuter(s, tipY, cream, creamShadow) — the cream outer fabric.
+//   s           : the measurements from getShape()
+//   tipY        : height of the umbrella tip
+//   cream       : [r, g, b] colour of the fabric
+//   creamShadow : [r, g, b] colour of the shaded side
+// ---------------------------------------------------------------------
+function drawOuter(s, tipY, cream, creamShadow) {
+  // No outlines for the fabric shapes.
+  noStroke();
+
+  // Width of the dome: twice the rim's half-width, made 2% wider so
+  // the dome slightly overlaps the edge of the green panels.
+  let domeW = s.rimHalfWidth * 2.04;
+
+  // arc() takes the width and height of the WHOLE ellipse, but we only
+  // draw its top half. The distance from the rim up to the tip is only
+  // HALF of the ellipse's height, so we multiply it by 2.
+  // (rimY - tipY is positive because tipY is the more negative number.)
+  let domeH = (s.rimY - tipY) * 2;
+
+
+  // ===== 1) The cream dome (top half of an ellipse) =====
+  // arc(centreX, centreY, width, height, startAngle, stopAngle)
+  // Angles are in degrees (because of angleMode(DEGREES) in setup) and
+  // are measured clockwise from 3 o'clock:
+  //   180 = 9 o'clock,  270 = 12 o'clock,  360 = back to 3 o'clock
+  // Going from 180 to 360 sweeps over the TOP of the ellipse.
+  // When filled, arc() fills the area back to its centre, giving a
+  // solid half-ellipse.
+  // Passing the whole colour array to fill() sets r, g and b at once.
+  fill(cream);
+  arc(0, s.rimY, domeW, domeH, 180, 360);
+
+
+  // ===== 2) A shadow on the left side for a 3D look =====
+  // Light comes from the upper right, so the left side is darker.
+  //
+  // Step A: draw a darker quarter of the ellipse on the left
+  //         (from 180 to 270 degrees, i.e. 9 o'clock to 12 o'clock).
+  fill(creamShadow);
+  arc(0, s.rimY, domeW, domeH, 180, 270);
+
+  // Step B: cover most of it with a slightly narrower cream dome
+  //         (78% of the width). Only a thin crescent of shadow is left
+  //         visible along the left edge.
+  fill(cream);
+  arc(0, s.rimY, domeW * 0.78, domeH * 0.99, 180, 360);
+
+
+  // ===== 3) The cream border around the rim =====
+  // We draw the same wavy rim shape as the green panels, but slightly
+  // larger. The green panels are drawn on top afterwards, so a thin
+  // cream border stays visible around them — it looks like the outer
+  // fabric wrapping around the edge.
+
+  // The 8 points where the ribs end on the rim (stored in an array).
+  let rim = getRimPoints(s, 8);
+
+  // The hub point where all the ribs meet, as an { x, y } object
+  // (an object written with name: value pairs, Week 3 Lecture).
+  let hub = { x: 0, y: s.hubY };
+
+  // Loop through every panel.
+  for (let i = 0; i < rim.length; i++) {
+    // Index of the NEXT rib. The % (remainder) operator wraps it
+    // around: when i is the last index, (i + 1) % rim.length becomes 0,
+    // so the last panel connects back to the first rib (the same idea
+    // as frameCount % valueArrayLength in the Week 8 Tutorial).
+    let next = (i + 1) % rim.length;
+
+    // The middle of the edge between this rib and the next one.
+    let mid = getScallop(rim[i], rim[next], hub);
+
+    // Push all three points slightly outwards.
+    let p1 = enlarge(rim[i], s.rimY);
+    let p2 = enlarge(rim[next], s.rimY);
+    let m = enlarge(mid, s.rimY);
+
+    // Nudge the middle point down a little, so the cream border is a
+    // bit thicker in the middle of each scallop.
+    m.y += 3;
+
+    // Each border piece is built from two triangles:
+    // hub -> p1 -> m, and hub -> m -> p2.
+    // triangle(x1, y1, x2, y2, x3, y3)  (Week 6 Lecture)
+    triangle(hub.x, hub.y, p1.x, p1.y, m.x, m.y);
+    triangle(hub.x, hub.y, m.x, m.y, p2.x, p2.y);
+  }
+}
+
+
+// ---------------------------------------------------------------------
+// drawInner(s, openAmount, panelCount, green) — the green inside of the
+// umbrella, seen from below.
+//   s          : the measurements from getShape()
+//   openAmount : how open the umbrella is (0 to 1)
+//   panelCount : number of panels
+//   green      : [r, g, b] base colour of the inner fabric
+// ---------------------------------------------------------------------
+function drawInner(s, openAmount, panelCount, green) {
+  // When the umbrella is closed you cannot see its inside, so the
+  // green fades in as it opens:
+  //   openAmount 0.1 or less  -> alpha 0   (invisible)
+  //   openAmount 0.6 or more  -> alpha 255 (solid)
+  // map() converts the range; constrain() stops alpha going below 0
+  // or above 255 when openAmount is outside 0.1–0.6.
+  let alpha = constrain(map(openAmount, 0.1, 0.6, 0, 255), 0, 255);
+
+  // Only draw the inside if it is at least a little bit visible.
+  if (alpha > 0) {
+    // The rib end points on the rim, and the hub where the ribs meet.
+    let rimPoints = getRimPoints(s, panelCount);
+    let hub = { x: 0, y: s.hubY };
+
+    // No outlines on the panels.
+    noStroke();
+
+    // Draw each of the panels.
+    for (let i = 0; i < panelCount; i++) {
+      // Rib at the start of this panel, and rib at the end of it
+      // (% wraps the last panel back to the first rib).
+      let p1 = rimPoints[i];
+      let p2 = rimPoints[(i + 1) % panelCount];
+
+      // The slightly curved-in middle of the panel's outer edge.
+      let mid = getScallop(p1, p2, hub);
+
+      // --- Simple lighting ---
+      // The angle pointing to the middle of this panel. 360 degrees is
+      // a full circle, divided equally between the panels; + 0.5 moves
+      // us from the panel's first rib to its centre.
+      let midAngle = (360 / panelCount) * (i + 0.5);
+
+      // cos() is largest (1) when the angle matches the light direction
+      // and smallest (-1) on the opposite side. Subtracting 23 degrees
+      // turns the light direction slightly, so panels facing it are
+      // brighter.
+      // light ends up roughly between 0.72 (dark) and 1.04 (bright).
+      let light = 0.88 + 0.16 * cos(midAngle - 23);
+
+      // Make every second panel a little darker so neighbouring panels
+      // are easier to tell apart. i % 2 === 0 is true for even numbers.
+      if (i % 2 === 0) {
+        light -= 0.06;
+      }
+
+      // Split each panel into two triangles: one slightly lighter, one
+      // slightly darker. This suggests the fold along the middle of
+      // each piece of fabric.
+      fillGreen(green, light + 0.05, alpha);
+      triangle(hub.x, hub.y, p1.x, p1.y, mid.x, mid.y);
+      fillGreen(green, light - 0.05, alpha);
+      triangle(hub.x, hub.y, mid.x, mid.y, p2.x, p2.y);
+    }
+
+    // --- Ribs ---
+    // Thin dark-green lines from the hub to each rib end point.
+    // They use the same alpha so they fade in together with the panels.
+    stroke(84, 132, 82, alpha);
+    strokeWeight(2);
+    for (let i = 0; i < rimPoints.length; i++) {
+      line(hub.x, hub.y, rimPoints[i].x, rimPoints[i].y);
+    }
+  }
+}
+
+
+// ---------------------------------------------------------------------
+// fillGreen(green, light, alpha) — set the fill to a lighter or darker
+// version of the base green.
+//   green : [r, g, b] base colour
+//   light : > 1 -> lighter, < 1 -> darker
+//   alpha : transparency (0 = invisible, 255 = solid)
+// ---------------------------------------------------------------------
 function fillGreen(green, light, alpha) {
+  // Here we cannot pass the whole array, because each value needs to be
+  // changed first. We take each element out with [0], [1], [2]
+  // (array indexing, Week 3 Lecture) and multiply it, the same idea as
+  // fill(randomOrNoiseArray[i] * 360, 100, 100) in the Week 8 Tutorial.
+  // Multiplying r, g and b by the same amount keeps the hue the same
+  // and only changes the brightness.
   fill(green[0] * light, green[1] * light, green[2] * light, alpha);
+}
+
+
+// ---------------------------------------------------------------------
+// drawShaft(s, openAmount, brown, darkBrown) — the shaft and handle.
+//   s          : the measurements from getShape()
+//   openAmount : how open the umbrella is (0 to 1)
+//   brown      : [r, g, b] colour of the shaft
+//   darkBrown  : [r, g, b] colour of the handle
+// ---------------------------------------------------------------------
+function drawShaft(s, openAmount, brown, darkBrown) {
+  // Where the shaft starts at the top:
+  //   closed (openAmount 0): at the bottom of the folded fabric
+  //   open   (openAmount 1): up at the hub where the ribs meet
+  // lerp blends smoothly between the two as the umbrella opens.
+  let startY = lerp(s.rimY + s.rimHalfHeight, s.hubY, openAmount);
+
+  // A thick brown line from that point down to the handle at (0, 0).
+  // The colour array is passed straight into stroke(), the same as
+  // stroke(this.srcImgSegColour) in the Week 7 Tutorial.
+  stroke(brown);
+  strokeWeight(9);
+  line(0, startY, 0, 0);
+
+  // The handle: a darker brown rectangle around the bottom of the shaft.
+  // rect(x, y, width, height) — x = -9 and width = 18 centre it on
+  // the shaft; it starts 40 px above the pivot and is 46 px tall.
+  noStroke();
+  fill(darkBrown);
+  rect(-9, -40, 18, 46);
+}
+
+
+// ---------------------------------------------------------------------
+// drawTip(tipY, cream) — the small pointed tip on top of the umbrella.
+//   tipY  : height of the tip
+//   cream : [r, g, b] colour of the tip
+// ---------------------------------------------------------------------
+function drawTip(tipY, cream) {
+  noStroke();
+  fill(cream);
+
+  // A narrow triangle pointing upwards:
+  //   bottom-left  (-10, tipY + 6)
+  //   top point    (  0, tipY - 22)
+  //   bottom-right ( 10, tipY + 6)
+  // Its base sits just below tipY, so it overlaps the top of the dome.
+  triangle(-10, tipY + 6, 0, tipY - 22, 10, tipY + 6);
 }
