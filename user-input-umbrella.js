@@ -1,45 +1,55 @@
 // user input-umberalla.js
 // MECHANIC: User input  (owner: Jiahui Zou)
-// The umbrella opens / closes when clicked and sways towards the mouse.
+// Iteration 4: the umbrella is joined to the main sketch and held by the woman.
+// The umbrella opens / closes when it is clicked and sways towards the mouse.
 // Both changes are eased with lerp(), so nothing jumps between states.
 //
-// JOINED TO THE MAIN SKETCH (iteration 3). Changes made for this:
+// AI note: this file was written with the help of Claude (Anthropic).
+// Claude generated the structure and the drawing code; I read, tested and
+// adjusted it.
+//
+// Only techniques taught in IDEA9103 are used. The tag "(Week N)" after a
+// technique is the Canvas module where the course teaches it
+// (Week 6 = p5.js, Week 7 = Object Oriented Programming,
+//  Week 8 = Procedural Patterns / Perlin noise, Week 10 = Sound,
+//  Week 11 = Easing and Animation; Weeks 2-4 = JavaScript basics).
+//
+// CHANGES FOR JOINING THE MAIN SKETCH
 //   - setup() is now setupUmbrella() and draw() is now drawUmbrella();
 //     sketch.js calls them (there can be only one setup() and draw()).
 //   - createCanvas(), background() and angleMode() moved to sketch.js.
-//   - The umbrella is held by the woman: every frame it is moved to her hand
-//     (getWomanHand() in woman-figure.js) and scaled with umbrellaScale().
+//   - The umbrella is held by the woman: every frame it is moved to her
+//     hand (getWomanHand() in woman-figure.js) and scaled with
+//     umbrellaScale().
 //   - mousePressed() now takes that scale into account.
-//   - The sway is wider: -60 to +60 degrees (120 degrees in all) instead of -8 to +8, and it follows the mouse faster (Lizuo, iteration 4).
+//   - The sway is wider: -60 to +60 degrees instead of -8 to +8, and it
+//     follows the mouse faster (with Lizuo Wang).
+//   - No transparency: the 4-value fill(r, g, b, alpha) / stroke(r, g, b,
+//     alpha) was not shown in class, so the panels now change colour from
+//     cream to green with lerp() inside a normal 3-value fill() / stroke().
 //
-// NO TRANSPARENCY: the 4-value fill(r, g, b, alpha) / stroke(r, g, b, alpha)
-// was not shown in class, so it was replaced. The panels now change colour
-// from cream to green as the umbrella opens: lerp() (Week 11) mixes each of
-// red, green and blue, and the result goes into a normal 3-value fill() or
-// stroke() (Week 6).
-//
-// AI note: written with the help of Claude (Anthropic).
-// "(Week N)" = the Canvas module where the course teaches that technique.
-//
-// Techniques used:
-//   fill(), stroke(), strokeWeight(), noStroke()             (Week 6)
-//   rect(), line(), triangle()                               (Week 6)
-//   mouseX, mouseY, mousePressed(), constrain()              (Week 6)
-//   dist()                                                   (Week 7)
-//   class, constructor, this, methods                        (Week 7)
-//   colour arrays passed to fill() / stroke()                (Week 7)
-//   objects { name: value }, array[0]                        (Week 3)
-//   functions that return an object                          (Week 4)
-//   for loops, if statements, ===                            (Week 4)
-//   % remainder, array.push()                                (Week 8)
-//   push() / pop() for drawing (not array.push!)             (Week 8)
-//   translate(), rotate(), scale(), sin(), cos()             (Week 8)
-//   map()                                                    (Week 10)
-//   lerp() easing and colour mixing, arc(), max()            (Week 11)
+// HOW IT FITS WITH sketch.js
+//   sketch.js calls  setupUmbrella()  once in setup()
+//                    drawUmbrella()   every frame in draw()
+//   p5.js calls      mousePressed()   (in this file) on every click.
+//   This file needs from the other files:
+//     getWomanHand()      where the woman's hand is   (woman-figure.js)
+//     umbrellaScale()     how big to draw the umbrella
+//     angleMode(DEGREES)  all angles here are degrees  (sketch.js)
+//   All sizes in this file are "umbrella units"; umbrellaScale() turns
+//   them into canvas pixels, so the umbrella grows and shrinks with the
+//   woman when the browser window changes size.
 
+// =====================================================================
+// 1. VARIABLES
+// =====================================================================
 // This variable will hold our single Umbrella object (an instance of the
-// Umbrella class defined further down in this file).
+// Umbrella class defined further down in this file). let: Week 2.
 let umbrella;
+
+// =====================================================================
+// 2. FUNCTIONS THAT sketch.js AND p5.js CALL
+// =====================================================================
 
 // setupUmbrella() — called once from setup() in sketch.js.
 // (Was setup() before the umbrella joined the main sketch.)
@@ -78,14 +88,20 @@ function mousePressed() {
 
   // How close the click needs to be: the current canopy width, but never
   // less than 90 units, so the thin CLOSED umbrella is still easy to hit.
+  // max() picks the bigger of the two numbers (Week 11).
   let hitRadius = max(s.rimHalfWidth, 90) * k;
 
-  // dist() gives the distance between the mouse and the canopy middle.
+  // dist() gives the distance between the mouse and the canopy middle
+  // (Week 7). if: Week 4.
   let d = dist(mouseX, mouseY, centreX, centreY);
   if (d < hitRadius) {
     umbrella.toggle();
   }
 }
+
+// =====================================================================
+// 3. HELPER: THE UMBRELLA'S SIZE
+// =====================================================================
 
 // getShape(openAmount) — work out the umbrella's current size, in umbrella
 // units (before scaling), measured from the hand along the shaft.
@@ -116,6 +132,10 @@ function getShape(openAmount) {
   };
 }
 
+// =====================================================================
+// 4. CLASS: THE UMBRELLA  (class and constructor: Week 7)
+// =====================================================================
+
 // The Umbrella class keeps the umbrella's data (position, state, colours)
 // and its behaviour (toggle, move, display) together.
 class Umbrella {
@@ -138,7 +158,7 @@ class Umbrella {
     // is set in sketch.js.
     this.angle = 0;
 
-    // Number of fabric panels (and ribs).
+    // Number of fabric panels (and ribs). The painting shows 8.
     this.panelCount = 8;
 
     // Distance from the hand up to the tip, in umbrella units. Negative
@@ -169,8 +189,12 @@ class Umbrella {
     this.y = hand.y;
 
     // 1) Opening / closing
-    // The ternary operator picks 1 when open, 0 when closed.
-    let target = this.isOpen ? 1 : 0;
+    // The target is 1 when the umbrella should be open, 0 when closed.
+    // if / else: Week 4.
+    let target = 0;
+    if (this.isOpen) {
+      target = 1;
+    }
 
     // Easing (Week 11): each frame, move 8% of the remaining distance
     // towards the target. The motion starts fast and slows down smoothly.
@@ -180,6 +204,7 @@ class Umbrella {
     // Keep the mouse x inside the canvas, then convert it into an angle
     // between -60 degrees (mouse on the left) and +60 degrees (right),
     // 120 degrees in all.
+    // constrain(): Week 6, map(): Week 10, 11.
     let mx = constrain(mouseX, 0, width);
     let targetAngle = map(mx, 0, width, -60, 60);
 
@@ -192,6 +217,7 @@ class Umbrella {
   display() {
     let s = getShape(this.openAmount);
 
+    // push() / pop() save and restore the drawing settings (Week 8).
     // Save the drawing settings, then transform in the Week 11 order:
     // translate -> rotate -> scale.
     // 1. translate: move the origin (0, 0) to the woman's hand.
@@ -203,7 +229,7 @@ class Umbrella {
     scale(umbrellaScale());
     noStroke();
 
-    // 1) Cream dome: the top half of an ellipse.
+    // 1) Cream dome: the top half of an ellipse. arc(): Week 11.
     // arc(centreX, centreY, width, height, startAngle, stopAngle)
     // Angles are measured clockwise from 3 o'clock, so 180 -> 360 sweeps
     // over the TOP. arc() takes the height of the WHOLE ellipse, and the
@@ -240,7 +266,8 @@ class Umbrella {
       // Layer A: a light yellow-green edge around the rim.
       // Every panel is drawn a little bigger first; the real panels are
       // drawn on top, so only a thin light edge stays visible.
-      // lerp(cream value, green value, greenAmount) for red, green and blue.
+      // lerp(cream value, green value, greenAmount) for red, green and blue
+      // (Week 11); for loop: Week 4.
       fill(lerp(242, 150, greenAmount), lerp(236, 192, greenAmount), lerp(216, 106, greenAmount));
       for (let i = 0; i < rim.length; i++) {
         // Index of the next rib. % wraps the last one back to 0, so the
@@ -273,6 +300,7 @@ class Umbrella {
         let light = 0.88 + 0.16 * cos(midAngle - 23);
 
         // Neighbouring panels alternate a little lighter / darker.
+        // % (remainder) and === : Weeks 4, 8.
         if (i % 2 === 0) {
           light = light - 0.06;
         }
@@ -287,6 +315,7 @@ class Umbrella {
       }
 
       // Layer C: the ribs, thin dark-green lines from the hub to the rim.
+      // stroke(), strokeWeight(), line(): Week 6.
       stroke(lerp(242, 64, greenAmount), lerp(236, 116, greenAmount), lerp(216, 66, greenAmount));
       strokeWeight(2);
       for (let i = 0; i < rim.length; i++) {
@@ -303,12 +332,13 @@ class Umbrella {
     line(0, startY, 0, 0);
 
     // 4) Handle: a darker rectangle at the bottom of the shaft, mostly
-    // hidden by the woman's hand. rect(x, y, width, height).
+    // hidden by the woman's hand. rect(x, y, width, height): Week 6.
     noStroke();
     fill(this.darkBrown);
     rect(-5, -10, 10, 40);
 
     // 5) Tip: a narrow cream triangle pointing up from the top of the dome.
+    // triangle(): Week 6.
     fill(this.cream);
     triangle(-8, this.tipY + 6, 0, this.tipY - 18, 8, this.tipY + 6);
 
@@ -316,6 +346,10 @@ class Umbrella {
     pop();
   }
 }
+
+// =====================================================================
+// 5. DRAWING HELPERS  (used by display() in the class)
+// =====================================================================
 
 // getRimPoints(s, panelCount) — where each rib ends on the rim.
 // Returns an array of { x, y } objects, one per rib.
