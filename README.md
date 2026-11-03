@@ -14,7 +14,7 @@ Open `index.html` in a browser (or use Live Server in VS Code). The canvas is 60
 ## The three mechanics
 | Mechanic | Files | What it does |
 | --- | --- | --- |
-| Perlin noise and randomness | `perlin-grass.js` | A noise wind rolls over the meadow; noise makes soft patches of greener or yellower grass; every blade and flower gets random sizes, colours and positions. |
+| Perlin noise and randomness | `perlin-grass.js` | Lizuo Wang uses Perlin noise and randomness to create patches of varying shades of color, allowing the grass to randomly display colors between the green and yellow tones. It randomly oscillates in the default mode. Additionally, it is linked with Jiahui Zou's user input: 1. The entire grass will exhibit the same movement direction as the parasol when the mouse is swayed. 2. When the user clicks to open the parasol, flowers will grow on the grass, and the flowers also use randomness, resulting in different colors and sizes each time they grow. |
 | User input | `user-input-umbrella.js` | Jiahui Zou's umbrella from the group assignment. The mouse swings it left and right (60 degrees each way). A click on the umbrella closes or opens it. Small changes for this picture (listed at the top of the file): a bigger canopy, and `display(part)` so the canopy can be drawn behind the woman and the handle in front. |
 | Time-based | `time-based-sky.js` | Fei Jiang's four-season sky from the group assignment: a 50 second cycle of spring, summer, autumn and winter, with the sun, clouds, falling leaves and snow. Small changes (listed at the top of the file): seasons last twice as long, more autumn leaves and denser snow. |
 
@@ -35,17 +35,14 @@ Note: `perlin-clouds.js` (clouds of the earlier Monet version) is no longer load
 Every technique is tagged "(Week N)" in the comments. Nothing outside the course content is used.
 
 ## AI use
-This Ghibli version was written with the help of Claude (Anthropic): the woman's shapes were drawn in code
-from a reference picture, `perlin-grass.js` was rewritten for the new meadow, and Claude joined the umbrella
-and the sky to `sketch.js` and made the small changes listed above. The structure follows the group assignment.
-See also the AI acknowledgements of the earlier version below.
+This comic-style version was completed with the assistance of Claude (Anthropic): The outlines of the female characters were drawn using code based on reference images; `perlin-grass.js` was rewritten to fit the new grass scene; The above-mentioned adjustments were made using Claude. The project structure followed the requirements of the group assignment.
 
 ---
 
 # Documentation of the earlier Monet version
 
 The text below documents the first version of the project (Monet's painting). It is kept for the report.
-In the current Ghibli version `perlin-snow.js` was removed, `perlin-clouds.js` is no longer loaded, and the
+In the current version `perlin-snow.js` was removed, `perlin-clouds.js` is no longer loaded, and the
 umbrella file was renamed from `user input-umberalla.js` to `user-input-umbrella.js`.
 
 Drawing order, back to front: sky and clouds, woman, umbrella, her hand, meadow (so the grass grows in front of her dress).
@@ -162,18 +159,11 @@ These techniques allow the sky and seasonal elements to change automatically ove
 
 ## AI acknowledgement
 
-- **Lizuo Wang** used Claude (Anthropic) to help write `perlin-grass.js`, `sketch.js` and `index.html` for iteration 1: the structure of the `GrassBlade` and `Flower` classes, the wind calculation and the layout of the project. Claude also helped check that only techniques taught in the course were used. Lizuo reads, tests and adjusts the generated code. AI-assisted code is also marked in comments at the top of each file.
-- **Iteration 2:** Lizuo used Claude (Anthropic) to write `perlin-clouds.js` (the `NoiseCloud` class and the season blending), to join `time-based-sky.js` to the main sketch (its `setup()` and `draw()` were moved or renamed so there is only one of each in the project, and its fixed season cloud calls were replaced by `drawNoiseClouds()`), and to rewrite `sketch.js` and `index.html` so the sky, clouds and meadow run together. Fei's own code is unchanged apart from those edits, which are listed in the comment at the top of `time-based-sky.js`.
-- **Iteration 4:** Lizuo used Claude (Anthropic) to write the link between the umbrella and the meadow (`updateGrassFromUmbrella()`, `updateFlowers()`, the flower colours and petals) and to slow down the clouds.
-- **Iteration 3:** Lizuo used Claude (Anthropic) to write `woman-figure.js` (the shared woman's body), to join Jiahui's umbrella file to the main sketch (his `setup()` / `draw()` became `setupUmbrella()` / `drawUmbrella()`, the fixed canvas and background were removed, the umbrella now follows the woman's hand and is scaled, and `mousePressed()` takes the scale into account; listed in the comment at the top of his file), and to retune `perlin-grass.js` and `perlin-clouds.js` for the smaller meadow.
-- **Iteration 4 (cloud layers, sun, horizon):** Lizuo used Claude (Anthropic) to rewrite `perlin-clouds.js` with season layers and the `StormCloud` class, to write `drawHorizonHaze()` in `perlin-grass.js` and `drawCycleSun()` in `time-based-sky.js` (Fei's old `drawMovingSun()` is no longer called; noted in the file's header).
-- **Iteration 4 (snow, season length):** Lizuo used Claude (Anthropic) to write `perlin-snow.js`, to tie the cloud fade to the season change, to make the seasons longer (one line in `time-based-sky.js`, plus the `drawNoiseSnow()` calls that replace `drawSnow()`) and to thicken the grass at the horizon.
-- **Iteration 4 (later):** Lizuo used Claude (Anthropic) to redraw the woman in more detail (`woman-figure.js`), to slow the grass's reaction to the umbrella, to remove the wind-level keys and to slow the season clock in `time-based-sky.js` (one line, noted in its header).
-- The team used ChatGPT to generate a concept image shown in the Week 9 presentation. It is not part of this project.
+- **Lizuo Wang** I used Claude (Anthropic) to help write `perlin-grass.js`, `sketch.js` and `index.html` for iteration 2,3,4: the structure of the `GrassBlade` and `Flower` classes, the wind calculation and the layout of the project. I reads, tests and adjusts the generated code.
   
 - **Fei Jiang:** I used ChatGPT (OpenAI) to assist with developing and refining my time-based seasonal sky mechanic. ChatGPT helped with the seasonal timing, smooth colour transitions, cloud drawing, moving sun, falling leaves and snowfall animations. It also helped me understand the functions and add explanatory comments to the code. I reviewed and adjusted the code through several iterations. The AI-assisted sections are explained in the comments of my original `time-based-sky.js`.
   
-- - **Jiahui Zou:** I used Claude (Anthropic) to assist with specific parts of `user input-umberalla.js`, including calculating the canopy's rib positions (`getRimPoints()`), shaping the scalloped edges (`getScallop()`), blending the green colour layers (`fillGreen()`), and calculating the clickable area when the umbrella tilts using `sin()`, `cos()` and `dist()`. Claude also helped debug the code and check the techniques against the IDEA9103 course materials. I reviewed and tested each version, adjusted the umbrella's proportions, colours and movement, and refined the interaction based on the results. AI-assisted sections are identified in the source code.
+- **Jiahui Zou:** I used Claude (Anthropic) to assist with specific parts of `user input-umberalla.js`, including calculating the canopy's rib positions (`getRimPoints()`), shaping the scalloped edges (`getScallop()`), blending the green colour layers (`fillGreen()`), and calculating the clickable area when the umbrella tilts using `sin()`, `cos()` and `dist()`. Claude also helped debug the code and check the techniques against the IDEA9103 course materials. I reviewed and tested each version, adjusted the umbrella's proportions, colours and movement, and refined the interaction based on the results. AI-assisted sections are identified in the source code.
 
 ## Iterations (Lizuo Wang)
 
