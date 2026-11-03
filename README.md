@@ -1,11 +1,6 @@
 # Woman with a Parasol - Ghibli-style interactive version
 
-A p5.js project that recreates a Ghibli-style picture of a woman with a green
-umbrella in a meadow. It keeps the three mechanics of our group assignment
-(Woman with a Parasol, interactive): Perlin noise and randomness (Lizuo Wang), user input
-(Jiahui Zou) and time-based (Fei Jiang). The little boy of the reference picture is left out.
-This version replaces the earlier Monet-based picture; the documentation of that earlier
-version is kept at the bottom of this file.
+This is a project created using p5.js, which recreates Monet's "Woman with a Parasol" in an anime style. There are three interactive mechanisms: Berlin noise and randomness (Lizuo Wang), user input (Jiahui Zou), and time-based interaction (Fei Jiang). The little boy in the original picture has been omitted. This version replaces the previous version based on Monet's work; the documentation of the old version is located at the bottom of this file.
 
 ## How to run
 Open `index.html` in a browser (or use Live Server in VS Code). The canvas is 600 x 871
