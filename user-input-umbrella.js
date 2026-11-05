@@ -27,10 +27,17 @@
 //   - No transparency: the 4-value fill(r, g, b, alpha) / stroke(r, g, b,
 //     alpha) was not shown in class, so the panels now change colour from
 //     cream to green with lerp() inside a normal 3-value fill() / stroke().
+//   - Instructions in white beside the handle: "Click the centre of the
+//     umbrella" with "Move the mouse left and right" just below it. Both
+//     stay still while the umbrella sways. sketch.js calls
+//     drawUmbrellaHints() as the last line of draw(), so the words are on
+//     top of everything. They stay level so they are easy to read.
+//     textSize(), text(): Week 8.
 //
 // HOW IT FITS WITH sketch.js
-//   sketch.js calls  setupUmbrella()  once in setup()
-//                    drawUmbrella()   every frame in draw()
+//   sketch.js calls  setupUmbrella()      once in setup()
+//                    drawUmbrella()       every frame in draw()
+//                    drawUmbrellaHints()  last line of draw()
 //   p5.js calls      mousePressed()   (in this file) on every click.
 //   This file needs from the other files:
 //     getWomanHand()      where the woman's hand is   (woman-figure.js)
@@ -64,6 +71,38 @@ function drawUmbrella() {
   // head.display() in the Week 11 Tutorial).
   umbrella.move();
   umbrella.display();
+}
+
+// drawUmbrellaHints() — two instructions next to the umbrella.
+// sketch.js calls this as the LAST line of draw(), after the meadow, the
+// woman and the umbrella, so nothing is drawn on top of the words.
+// The words are never rotated, so they are always easy to read.
+function drawUmbrellaHints() {
+  let k = umbrellaScale();
+
+  // Text size: 20 umbrella units, but at least 12 pixels (max(): Week 11).
+  let hintSize = max(20 * k, 12);
+
+  // Both lines are measured from the woman's hand only (not from the
+  // umbrella's tilt), so the words stay still while the umbrella sways.
+  // They sit just below the handle, to the LEFT of the hand (the woman is
+  // on the right). The umbrella only swings ABOVE the hand, so it never
+  // covers them. text() starts the words at x.
+  let hintX = umbrella.x - 330 * k;
+  let moveTextY = umbrella.y + 60 * k;
+
+  // The "Click" line goes directly above the "Move" line, one and a half
+  // text heights higher.
+  let clickTextY = moveTextY - hintSize * 1.5;
+
+  // push() / pop() keep these style changes away from other drawings (Week 8).
+  push();
+  noStroke();
+  fill(255);                              // white
+  textSize(hintSize);
+  text("Click the centre of the umbrella", hintX, clickTextY);
+  text("Move the mouse left and right", hintX, moveTextY);
+  pop();
 }
 
 // mousePressed() is called automatically by p5.js on every click.
