@@ -192,7 +192,8 @@ class Umbrella {
     // gradually towards the target in move().
     this.isOpen = true;
     this.openAmount = 1;
-
+    
+    //assit by claude to calculate
     // Current tilt of the umbrella in degrees (0 = upright). angleMode()
     // is set in sketch.js.
     this.angle = 0;
